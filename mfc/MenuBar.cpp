@@ -244,7 +244,7 @@ BOOL MenuBar::TranslateFrameMessage(MSG* msg)
   case WM_SYSKEYUP:
 
     // Check for menu key (Alt) or F10 without Alt/Ctrl/Shift
-    if ((msg->wParam == VK_MENU) || (m_useF10 && (msg->wParam == VK_F10) && !(shift||ctrl||alt)))
+    if ((msg->wParam == VK_LMENU) || (m_useF10 && (msg->wParam == VK_F10) && !(shift||ctrl||alt)))
     {
       switch (m_tracking)
       {
@@ -263,7 +263,7 @@ BOOL MenuBar::TranslateFrameMessage(MSG* msg)
   case WM_SYSKEYDOWN:
 
     // Check for menu key (Alt) or F10 without Alt/Ctrl/Shift
-    if ((msg->wParam == VK_MENU) || (m_useF10 && (msg->wParam == VK_F10) && !(shift||ctrl||alt)))
+    if ((msg->wParam == VK_LMENU) || (m_useF10 && (msg->wParam == VK_F10) && !(shift||ctrl||alt)))
       return FALSE;
 
     if (m_tracking == TRACK_BUTTON)
@@ -406,7 +406,7 @@ void MenuBar::OnUpdateCmdUI(CFrameWnd* target, BOOL disableIfNoHndler)
     if (::SystemParametersInfo(SPI_GETKEYBOARDCUES,0,&always,0) == 0)
       always = TRUE;
 
-    bool alt = ((::GetKeyState(VK_MENU) & 0x8000) != 0);
+    bool alt = ((::GetKeyState(VK_LMENU) & 0x8000) != 0);
     bool f10 = ((::GetKeyState(VK_F10) & 0x8000) != 0) && m_useF10;
 
     // Show or hide the menu keyboard shortcuts
