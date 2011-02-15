@@ -235,9 +235,9 @@ BOOL MenuBar::TranslateFrameMessage(MSG* msg)
     return FALSE;
   }
 
-  bool alt = ((HIWORD(msg->lParam) & KF_ALTDOWN) != 0);
-  bool shift = ((::GetKeyState(VK_SHIFT) & 0x80000000) != 0);
-  bool ctrl = ((::GetKeyState(VK_CONTROL) & 0x80000000) != 0);
+  bool alt = ((::GetKeyState(VK_LMENU) & 0x8000) != 0);
+  bool shift = ((::GetKeyState(VK_SHIFT) & 0x8000) != 0);
+  bool ctrl = ((::GetKeyState(VK_CONTROL) & 0x8000) != 0);
 
   switch (msg->message)
   {
