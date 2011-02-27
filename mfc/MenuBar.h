@@ -11,11 +11,13 @@ typedef BOOL (WINAPI* SETMENUINFO)(HMENU,LPCMENUINFO);
 class MenuBar : public CToolBar
 {
 public:
+  typedef bool (*FilterAltX)(char c);
+
   MenuBar();
   ~MenuBar();
 
   void SetUseF10(bool use);
-  void SetUseAltX(bool use);
+  void SetFilterAltX(FilterAltX filter);
   BOOL Create(UINT id, CMenu* menu, CWnd* parent);
   void LoadBitmaps(CBitmap& bitmap, CToolBarCtrl& bar, CSize size, bool alpha);
   void Update(void);
@@ -57,6 +59,7 @@ protected:
   int GetNextButton(int button, bool goBack);
   void SetBitmaps(CMenu* menu);
   void UpdateFont(void);
+  bool AllowAltX(WPARAM wp);
 
   static LRESULT CALLBACK InputFilter(int code, WPARAM wp, LPARAM lp);
 
@@ -65,7 +68,7 @@ protected:
   SETMENUINFO m_setMenuInfo;
   bool m_useBitmaps;
   bool m_useF10;
-  bool m_useAltX;
+  FilterAltX m_filterAltX;
 
   CMenu m_menu;
   CFont m_font;

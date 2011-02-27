@@ -37,7 +37,7 @@ MenuBar::MenuBar()
   m_escapePressed = false;
 
   m_useF10 = true;
-  m_useAltX = true;
+  m_filterAltX = NULL;
 
   m_osVer.dwOSVersionInfoSize = sizeof m_osVer;
   ::GetVersionEx(&m_osVer);
@@ -67,9 +67,9 @@ void MenuBar::SetUseF10(bool use)
   m_useF10 = use;
 }
 
-void MenuBar::SetUseAltX(bool use)
+void MenuBar::SetFilterAltX(FilterAltX filter)
 {
-  m_useAltX = use;
+  m_filterAltX = filter;
 }
 
 BOOL MenuBar::Create(UINT id, CMenu* menu, CWnd* parent)
@@ -295,9 +295,9 @@ BOOL MenuBar::TranslateFrameMessage(MSG* msg)
     {
       // Alt-X, or else X while tracking menu buttons
       UINT id;
-      if (GetToolBarCtrl().MapAccelerator((TCHAR)msg->wParam,&id))
+      if (GetToolBarCtrl().MapAccelerator((CHAR)msg->wParam,&id))
       {
-        if (!alt || m_useAltX)
+        if (!alt || AllowAltX(msg->wParam))
         {
           PostMessage(WM_MENUBAR_POPUP,id,TRUE);
           return TRUE;
@@ -714,6 +714,13 @@ void MenuBar::UpdateFont(void)
   ::SystemParametersInfo(SPI_GETNONCLIENTMETRICS,ncm.cbSize,&ncm,0);
   m_font.CreateFontIndirect(&ncm.lfMenuFont);
   SetFont(&m_font);
+}
+
+bool MenuBar::AllowAltX(WPARAM wp)
+{
+  if (m_filterAltX != NULL)
+    return (*m_filterAltX)((char)wp);
+  return true;
 }
 
 LRESULT CALLBACK MenuBar::InputFilter(int code, WPARAM wp, LPARAM lp)
