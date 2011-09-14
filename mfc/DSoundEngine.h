@@ -39,7 +39,7 @@ public:
   WAVEFORMATEX& GetPrimaryFormat(void);
   LPDIRECTSOUND GetInterface(void);
 
-  bool Initialize(void);
+  bool Initialize(void (*pThreadCallback)(void) = NULL);
   void Destroy(void);
   void StopThread(void);
 
@@ -61,9 +61,10 @@ protected:
   // Background thread
   HANDLE m_hEvent;
   CWinThread* m_pThread;
+  void (*m_pThreadCallback)(void);
 
   // Array of playing sounds
-  CMutex m_SoundLock;
+  CCriticalSection m_SoundLock;
   CList<CDSound*,CDSound*> m_Sounds;
 };
 

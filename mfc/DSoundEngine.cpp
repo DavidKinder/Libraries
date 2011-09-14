@@ -70,10 +70,13 @@ CDSoundEngine::~CDSoundEngine()
 }
 
 // Initialize the DirectSound sound engine
-bool CDSoundEngine::Initialize(void)
+bool CDSoundEngine::Initialize(void (*pThreadCallback)(void))
 {
   if (m_Status != STATUS_NOT_INIT)
     return true;
+
+  // Save the thread callback
+  m_pThreadCallback = pThreadCallback;
 
   // Create an event for signalling the background thread
   m_hEvent = ::CreateEvent(NULL,FALSE,FALSE,NULL);
@@ -198,23 +201,29 @@ UINT CDSoundEngine::BackgroundThread(LPVOID)
     if (::WaitForSingleObject(SoundEngine.m_hEvent,100) == WAIT_OBJECT_0)
       return 0;
 
-    // Get the lock on the list of playing sounds
-    CSingleLock Lock(&SoundEngine.m_SoundLock,TRUE);
-
-    // Update each sound buffer in turn
-    DWORD Tick = ::GetTickCount();
-    POSITION Pos = SoundEngine.m_Sounds.GetHeadPosition();
-    while (Pos != NULL)
     {
-      CDSound* pSound = SoundEngine.m_Sounds.GetNext(Pos);
+      // Get the lock on the list of playing sounds
+      CSingleLock Lock(&SoundEngine.m_SoundLock,TRUE);
 
-      // Check if the sound has finished, otherwise
-      // write more sample data
-      if (pSound->IsSoundOver(Tick))
-        pSound->DestroyBuffer();
-      else
-        pSound->FillBuffer(pSound->GetWriteSize());
+      // Update each sound buffer in turn
+      DWORD Tick = ::GetTickCount();
+      POSITION Pos = SoundEngine.m_Sounds.GetHeadPosition();
+      while (Pos != NULL)
+      {
+        CDSound* pSound = SoundEngine.m_Sounds.GetNext(Pos);
+
+        // Check if the sound has finished, otherwise
+        // write more sample data
+        if (pSound->IsSoundOver(Tick))
+          pSound->DestroyBuffer();
+        else
+          pSound->FillBuffer(pSound->GetWriteSize());
+      }
     }
+
+    // If a callback has been specified, call it (with no locks held)
+    if (SoundEngine.m_pThreadCallback != NULL)
+      (*(SoundEngine.m_pThreadCallback))();
   }
   return 0;
 }
