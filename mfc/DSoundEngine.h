@@ -47,6 +47,8 @@ public:
   void RemoveFromList(CDSound* pSound);
   void StopSounds(int iType);
 
+  static CSyncObject* GetSoundLock(void);
+
 protected:
   CDSoundEngine();
   static UINT BackgroundThread(LPVOID);
@@ -79,7 +81,6 @@ public:
   virtual ~CDSound();
 
   void SetBufferVolume(LONG Volume);
-  bool IsBufferPlaying(void);
   int GetWriteSize(void);
   bool FillBuffer(int Bytes);
   void DestroyBuffer(void);
@@ -94,15 +95,17 @@ protected:
   
   bool CreateBuffer(int Channels, int Frequency, int BitsPerSample);
   int GetBufferSize(void);
-  bool PlayBuffer(void);
+  bool PlayBuffer(bool PauseState);
+  void Pause(bool PauseState);
+  DWORD GetStatus(void);
 
   WAVEFORMATEX m_Format;
   LPDIRECTSOUNDBUFFER m_IDSBuffer;
   int m_WritePos;
 
-  // Whether the sound is playing or not, may be set by
-  // the background thread.
-  volatile bool m_Playing;
+  // Whether the sound is on the list of active sounds processed by the
+  // background thread: this will be changed by the background thread.
+  volatile bool m_Active;
 
   // Time at which playback started
   DWORD m_StartTime;

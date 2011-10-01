@@ -165,14 +165,14 @@ void CDSoundEngine::StopThread(void)
 // Add to the list of playing sounds
 void CDSoundEngine::AddToList(CDSound* pSound)
 {
-  CSingleLock Lock(&m_SoundLock,TRUE);
+  CSingleLock Lock(GetSoundLock(),TRUE);
   m_Sounds.AddTail(pSound);
 }
 
 // Remove this sound from the playing list
 void CDSoundEngine::RemoveFromList(CDSound* pSound)
 {
-  CSingleLock Lock(&m_SoundLock,TRUE);
+  CSingleLock Lock(GetSoundLock(),TRUE);
   POSITION Pos = m_Sounds.Find(pSound);
   if (Pos != NULL)
     m_Sounds.RemoveAt(Pos);
@@ -181,7 +181,7 @@ void CDSoundEngine::RemoveFromList(CDSound* pSound)
 // Stop playing sounds of the given type
 void CDSoundEngine::StopSounds(int iType)
 {
-  CSingleLock Lock(&m_SoundLock,TRUE);
+  CSingleLock Lock(GetSoundLock(),TRUE);
 
   POSITION Pos = m_Sounds.GetHeadPosition();
   while (Pos != NULL)
@@ -190,6 +190,11 @@ void CDSoundEngine::StopSounds(int iType)
     if (pSound->GetType() == iType)
       pSound->DestroyBuffer();
   }
+}
+
+CSyncObject* CDSoundEngine::GetSoundLock(void)
+{
+  return &SoundEngine.m_SoundLock;
 }
 
 // Background thread loop
@@ -203,7 +208,7 @@ UINT CDSoundEngine::BackgroundThread(LPVOID)
 
     {
       // Get the lock on the list of playing sounds
-      CSingleLock Lock(&SoundEngine.m_SoundLock,TRUE);
+      CSingleLock Lock(GetSoundLock(),TRUE);
 
       // Update each sound buffer in turn
       DWORD Tick = ::GetTickCount();
@@ -212,8 +217,7 @@ UINT CDSoundEngine::BackgroundThread(LPVOID)
       {
         CDSound* pSound = SoundEngine.m_Sounds.GetNext(Pos);
 
-        // Check if the sound has finished, otherwise
-        // write more sample data
+        // Check if the sound has finished, otherwise write more sample data
         if (pSound->IsSoundOver(Tick))
           pSound->DestroyBuffer();
         else
@@ -238,7 +242,7 @@ CDSound::CDSound()
   m_IDSBuffer = NULL;
 
   m_WritePos = 0;
-  m_Playing = false;
+  m_Active = false;
   m_StartTime = 0;
 }
 
@@ -371,7 +375,7 @@ void CDSound::DestroyBuffer(void)
   m_IDSBuffer = NULL;
 
   m_WritePos = 0;
-  m_Playing = false;
+  m_Active = false;
   m_StartTime = 0;
 }
 
@@ -387,13 +391,17 @@ void CDSound::SetBufferVolume(LONG Volume)
 }
 
 // Play the sound buffer
-bool CDSound::PlayBuffer(void)
+bool CDSound::PlayBuffer(bool PauseState)
 {
   if (m_IDSBuffer == NULL)
     return false;
-  if (FAILED(m_IDSBuffer->Play(0,0,DSBPLAY_LOOPING)))
-    return false;
-  m_Playing = true;
+
+  if (!PauseState)
+  {
+    if (FAILED(m_IDSBuffer->Play(0,0,DSBPLAY_LOOPING)))
+      return false;
+  }
+  m_Active = true;
 
   // Store the time at which the sound started playing
   m_StartTime = ::GetTickCount();
@@ -403,8 +411,26 @@ bool CDSound::PlayBuffer(void)
   return true;
 }
 
-// Check if the sound buffer is currently playing
-bool CDSound::IsBufferPlaying(void)
+// Pause or restart the sound buffer
+void CDSound::Pause(bool PauseState)
 {
-  return m_Playing;
+  if (m_IDSBuffer != NULL)
+  {
+    if (PauseState)
+      m_IDSBuffer->Stop();
+    else
+      m_IDSBuffer->Play(0,0,DSBPLAY_LOOPING);
+  }
+}
+
+// Get the status of the sound buffer
+DWORD CDSound::GetStatus(void)
+{
+  if (m_IDSBuffer != NULL)
+  {
+    DWORD status = 0;
+    if (SUCCEEDED(m_IDSBuffer->GetStatus(&status)))
+      return status;
+  }
+  return 0;
 }
