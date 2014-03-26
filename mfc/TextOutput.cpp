@@ -431,8 +431,6 @@ bool TextOutput::CanOutput(HDC dc, WCHAR c)
       m_fl->ReleaseFont(linkFont);
       return true;
     }
-    else
-      return false;
   }
 
 leave:
