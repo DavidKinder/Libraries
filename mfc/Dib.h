@@ -69,6 +69,11 @@ public:
     m_ppvBits[x+(y*m_BitmapInfo.bmiHeader.biWidth)] = col;
   }
 
+  static inline void SetPixel(DWORD* ppvBits, LONG w, LONG x, LONG y, DWORD col)
+  {
+    ppvBits[x+(y*w)] = col;
+  }
+
   inline DWORD GetPixel(LONG x, LONG y) const
   {
     return m_ppvBits[x+(y*m_BitmapInfo.bmiHeader.biWidth)];
