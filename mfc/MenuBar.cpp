@@ -210,7 +210,7 @@ void MenuBar::Update(void)
   if (m_menu.GetMenuItemCount() > 0)
   {
     SetButtons(0,m_menu.GetMenuItemCount());
-    for (UINT i = 0; i < m_menu.GetMenuItemCount(); i++)
+    for (UINT i = 0; i < (UINT)m_menu.GetMenuItemCount(); i++)
     {
       CString title;
       m_menu.GetMenuString(i,title,MF_BYPOSITION);
@@ -657,7 +657,7 @@ void MenuBar::SetBitmaps(CMenu* menu)
     return;
 
   bool hasBitmap = false;
-  for (UINT i = 0; i < menu->GetMenuItemCount(); i++)
+  for (UINT i = 0; i < (UINT)menu->GetMenuItemCount(); i++)
   {
     UINT id = menu->GetMenuItemID(i);
     switch (id)
