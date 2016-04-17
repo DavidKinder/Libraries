@@ -56,10 +56,6 @@ void TextOutput::TextOut(HDC dc, int x, int y, LPCWSTR str, UINT count)
     ::MoveToEx(dc,x,y,&pos);
   }
 
-  // Get the default text metrics
-  TEXTMETRIC metrics;
-  ::GetTextMetrics(dc,&metrics);
-
   // If no font linking, just use the current font
   if (m_fl == NULL)
     goto leave;
@@ -70,6 +66,9 @@ void TextOutput::TextOut(HDC dc, int x, int y, LPCWSTR str, UINT count)
   HRESULT hr = m_fl->GetFontCodePages(dc,font,&fontCodePages);
   if (FAILED(hr))
     goto leave;
+
+  TEXTMETRIC defaultMetrics;
+  bool gotDefaultMetrics = false;
 
   while (count > 0)
   {
@@ -102,6 +101,16 @@ void TextOutput::TextOut(HDC dc, int x, int y, LPCWSTR str, UINT count)
 
       if (SUCCEEDED(hr))
       {
+        if ((align & (TA_TOP|TA_BASELINE|TA_BOTTOM)) == TA_TOP)
+        {
+          // Get the default text metrics
+          if (!gotDefaultMetrics)
+          {
+            ::GetTextMetrics(dc,&defaultMetrics);
+            gotDefaultMetrics = true;
+          }
+        }
+
         // Got a suitable font, so use it
         ::SelectObject(dc,linkFont);
 
@@ -111,7 +120,7 @@ void TextOutput::TextOut(HDC dc, int x, int y, LPCWSTR str, UINT count)
         {
           TEXTMETRIC linkMetrics;
           ::GetTextMetrics(dc,&linkMetrics);
-          y = linkMetrics.tmAscent - metrics.tmAscent;
+          y = linkMetrics.tmAscent - defaultMetrics.tmAscent;
         }
         if (y != 0)
           ShiftYPos(dc,-y);
