@@ -6,6 +6,14 @@
 #define GGI_MARK_NONEXISTING_GLYPHS 1
 #endif
 
+// From winnls.h
+#ifndef HIGH_SURROGATE_START
+#define HIGH_SURROGATE_START 0xd800
+#endif
+#ifndef HIGH_SURROGATE_END
+#define HIGH_SURROGATE_END 0xdbff
+#endif
+
 #include <set>
 
 TextOutput::TextOutput()
