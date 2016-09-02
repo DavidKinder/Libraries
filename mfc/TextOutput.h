@@ -2,6 +2,9 @@
 
 #include <mlang.h>
 
+#include <map>
+#include <string>
+
 class TextOutput
 {
 public:
@@ -21,14 +24,20 @@ public:
   bool GetCharABCWidth(HDC dc, WCHAR c, ABCFLOAT& abc);
 
   // Determine if a given character can be output
-  bool CanOutput(HDC dc, WCHAR c);
+  bool CanOutput(HDC dc, UINT32 c);
 
   // Reset the cache of linked fonts
   void Reset(void);
 
 private:
-  CComPtr<IMLangFontLink2> m_fl;
+  void AddTextExtent(HDC dc, LPCWSTR str, UINT count, CSize& result);
+  void ShiftYPos(HDC dc, int y);
+
+  bool MapFontHigh(HDC dc, UINT32 c, HFONT& font);
+
   HMODULE m_gdi;
+  CComPtr<IMLangFontLink2> m_fl;
+  std::map<std::pair<std::string,int>,HFONT> m_cache;
 
   typedef DWORD (WINAPI *GetGlyphIndicesWPtr)(HDC, LPCWSTR, int, LPWORD, DWORD);
   GetGlyphIndicesWPtr m_getGlyphIndicesW;
