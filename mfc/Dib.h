@@ -57,6 +57,8 @@ public:
 
   void AlphaBlend(COLORREF back);
   void AlphaBlend(const CDibSection* from, LONG x, LONG y, BOOL invert = FALSE);
+  void AlphaBlend(const CDibSection* from, LONG fx, LONG fy, LONG fw, LONG fh,
+    LONG x, LONG y, BOOL invert);
 
   void FillSolid(COLORREF back);
   void Darken(double dark);

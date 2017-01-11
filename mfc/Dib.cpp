@@ -286,15 +286,21 @@ void CDibSection::AlphaBlend(COLORREF back)
 
 void CDibSection::AlphaBlend(const CDibSection* from, LONG x, LONG y, BOOL invert)
 {
+  CSize sz = from->GetSize();
+  AlphaBlend(from,0,0,sz.cx,sz.cy,x,y,invert);
+}
+
+void CDibSection::AlphaBlend(const CDibSection* from, LONG fx, LONG fy, LONG fw, LONG fh, LONG x, LONG y, BOOL invert)
+{
   int sr, sg, sb, dr, dg, db, a;
   DWORD src, dest;
 
   CSize srcSize = from->GetSize();
   CSize destSize = GetSize();
 
-  for (int y1 = 0; y1 < srcSize.cy; y1++)
+  for (int y1 = 0; y1 < fh; y1++)
   {
-    for (int x1 = 0; x1 < srcSize.cx; x1++)
+    for (int x1 = 0; x1 < fw; x1++)
     {
       if ((x+x1 < 0) || (x+x1 >= destSize.cx))
         continue;
@@ -308,7 +314,7 @@ void CDibSection::AlphaBlend(const CDibSection* from, LONG x, LONG y, BOOL inver
       dest >>= 8;
       dr = dest & 0xFF;
 
-      src = invert ? from->GetPixel(x1,srcSize.cy-y1-1) : from->GetPixel(x1,y1);
+      src = invert ? from->GetPixel(fx+x1,srcSize.cy-fy-y1-1) : from->GetPixel(fx+x1,fy+y1);
       sb = src & 0xFF;
       src >>= 8;
       sg = src & 0xFF;
