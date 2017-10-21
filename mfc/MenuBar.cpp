@@ -243,8 +243,9 @@ BOOL MenuBar::TranslateFrameMessage(MSG* msg)
   {
   case WM_SYSKEYUP:
 
-    // Check for menu key (Alt) or F10 without Alt/Ctrl/Shift
-    if ((msg->wParam == VK_MENU) || (m_useF10 && (msg->wParam == VK_F10) && !(shift||ctrl||alt)))
+    // Check for menu key (Alt) without Ctrl/Shift or F10 without Alt/Ctrl/Shift
+    if (((msg->wParam == VK_MENU) && !(shift||ctrl)) ||
+        (m_useF10 && (msg->wParam == VK_F10) && !(shift||ctrl||alt)))
     {
       switch (m_tracking)
       {
@@ -263,7 +264,8 @@ BOOL MenuBar::TranslateFrameMessage(MSG* msg)
   case WM_SYSKEYDOWN:
 
     // Check for menu key (Alt) or F10 without Alt/Ctrl/Shift
-    if ((msg->wParam == VK_MENU) || (m_useF10 && (msg->wParam == VK_F10) && !(shift||ctrl||alt)))
+    if ((msg->wParam == VK_MENU) ||
+        (m_useF10 && (msg->wParam == VK_F10) && !(shift||ctrl||alt)))
       return FALSE;
 
     if (m_tracking == TRACK_BUTTON)
