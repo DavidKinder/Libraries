@@ -9,7 +9,7 @@ public:
   COLORREF GetCurrentColour(void) { return m_colour; }
   void SetCurrentColour(COLORREF c) { m_colour = c; }
 
-  BOOL SubclassDlgItem(UINT id, CWnd* parent);
+  BOOL SubclassDlgItem(UINT id, CWnd* parent, UINT notifyMsgId = 0);
 
 protected:
   afx_msg void OnClicked();
@@ -29,4 +29,5 @@ protected:
 
   COLORREF m_colour;
   HMODULE m_themes;
+  UINT m_notifyMsgId;
 };

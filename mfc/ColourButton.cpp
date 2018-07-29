@@ -16,6 +16,7 @@ ColourButton::ColourButton()
 {
   m_colour = RGB(0,0,0);
   m_themes = ::LoadLibrary("UxTheme.dll");
+  m_notifyMsgId = 0;
 }
 
 ColourButton::~ColourButton()
@@ -24,12 +25,13 @@ ColourButton::~ColourButton()
     ::FreeLibrary(m_themes);
 }
 
-BOOL ColourButton::SubclassDlgItem(UINT id, CWnd* parent)
+BOOL ColourButton::SubclassDlgItem(UINT id, CWnd* parent, UINT notifyMsgId)
 {
   if (CButton::SubclassDlgItem(id,parent))
   {
     if (GetDllVersion("comctl32.dll") < MAKELONG(0,6))
       ModifyStyle(0,BS_OWNERDRAW,0);
+    m_notifyMsgId = notifyMsgId;
     return TRUE;
   }
   return FALSE;
@@ -42,6 +44,8 @@ void ColourButton::OnClicked()
   {
     m_colour = dialog.GetColor();
     Invalidate();
+    if (m_notifyMsgId != 0)
+      GetParent()->PostMessage(m_notifyMsgId);
   }
 }
 
