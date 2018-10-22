@@ -122,6 +122,9 @@ bool CDSoundEngine::Initialize(void (*pThreadCallback)(void))
 // Release the DirectSound interface
 void CDSoundEngine::Destroy(void)
 {
+  StopThread();
+  m_Status = STATUS_SHUT;
+
   if (m_IDBuffer != NULL)
   {
     m_IDBuffer->Stop();
@@ -134,9 +137,6 @@ void CDSoundEngine::Destroy(void)
     m_IDSound->Release();
     m_IDSound = NULL;
   }
-
-  StopThread();
-  m_Status = STATUS_SHUT;
 }
 
 // Stop the background thread
