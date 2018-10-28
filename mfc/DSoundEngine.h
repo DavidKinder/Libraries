@@ -46,6 +46,7 @@ public:
   void AddToList(CDSound* pSound);
   void RemoveFromList(CDSound* pSound);
   void StopSounds(int iType);
+  int CountSounds(int iType);
 
   static CSyncObject* GetSoundLock(void);
 

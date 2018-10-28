@@ -192,6 +192,22 @@ void CDSoundEngine::StopSounds(int iType)
   }
 }
 
+// Count the number of playing sounds of the given type
+int CDSoundEngine::CountSounds(int iType)
+{
+  CSingleLock Lock(GetSoundLock(),TRUE);
+
+  int count = 0;
+  POSITION Pos = m_Sounds.GetHeadPosition();
+  while (Pos != NULL)
+  {
+    CDSound* pSound = m_Sounds.GetNext(Pos);
+    if (pSound->GetType() == iType)
+      count++;
+  }
+  return count;
+}
+
 CSyncObject* CDSoundEngine::GetSoundLock(void)
 {
   return &SoundEngine.m_SoundLock;
