@@ -21,6 +21,7 @@ public:
   BOOL Create(UINT id, CMenu* menu, CWnd* parent);
   void LoadBitmaps(CBitmap& bitmap, CToolBarCtrl& bar, CSize size, bool alpha);
   void Update(void);
+  void UpdateFont(int dpi);
   CMenu* GetMenu(void) const;
 
   BOOL TranslateFrameMessage(MSG* msg);
@@ -58,7 +59,6 @@ protected:
   int HitTest(CPoint pt);
   int GetNextButton(int button, bool goBack);
   void SetBitmaps(CMenu* menu);
-  void UpdateFont(void);
   bool AllowAltX(WPARAM wp);
 
   static LRESULT CALLBACK InputFilter(int code, WPARAM wp, LPARAM lp);
@@ -97,6 +97,9 @@ protected:
 
 class MenuBarFrameWnd : public CFrameWnd
 {
+public:
+  void UpdateDPI(int dpi);
+
 protected: 
   DECLARE_DYNAMIC(MenuBarFrameWnd)
 
@@ -111,8 +114,8 @@ protected:
   virtual BOOL CreateBar(UINT id, UINT highId);
   CMenu* GetMenu(void) const;
 
-  static bool IsHighColour(void);
-  static void LoadBitmap(CBitmap& bitmap, UINT id);
+  bool IsHighColour(void);
+  void LoadBitmap(CBitmap& bitmap, UINT id);
 
   CReBar m_coolBar;
   MenuBar m_menuBar;

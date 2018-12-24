@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "MenuBar.h"
+#include "DpiFunctions.h"
 
 #include <shlwapi.h>
 
@@ -86,7 +87,7 @@ BOOL MenuBar::Create(UINT id, CMenu* menu, CWnd* parent)
     return FALSE;
   }
   GetToolBarCtrl().SetBitmapSize(CSize(0,0));
-  UpdateFont();
+  UpdateFont(DPI::getWindowDPI(parent));
 
   // For Windows XP and earlier, disable theming so that the menu text colour can be set
   if (m_osVer.dwMajorVersion < 6)
@@ -220,6 +221,17 @@ void MenuBar::Update(void)
   }
 }
 
+void MenuBar::UpdateFont(int dpi)
+{
+  if (m_font.GetSafeHandle() != 0)
+    m_font.DeleteObject();
+  if (DPI::createSystemMenuFont(&m_font,dpi))
+    SetFont(&m_font);
+
+  int barHeight = DPI::getSystemMetrics(SM_CYMENU,dpi);
+  GetToolBarCtrl().SetButtonSize(CSize(0,barHeight));
+}
+
 CMenu* MenuBar::GetMenu(void) const
 {
   return const_cast<CMenu*>(&m_menu);
@@ -330,9 +342,10 @@ void MenuBar::OnMouseMove(UINT nFlags, CPoint pt)
   CToolBar::OnMouseMove(nFlags,pt);
 }
 
-void MenuBar::OnSettingChange(UINT, LPCTSTR)
+void MenuBar::OnSettingChange(UINT uiAction, LPCTSTR)
 {
-  UpdateFont();
+  if (uiAction == SPI_SETNONCLIENTMETRICS)
+    UpdateFont(DPI::getWindowDPI(GetParent()));
 }
 
 void MenuBar::OnCustomDraw(NMHDR* nmhdr, LRESULT* result)
@@ -703,21 +716,6 @@ void MenuBar::SetBitmaps(CMenu* menu)
   }
 }
 
-void MenuBar::UpdateFont(void)
-{
-  if (m_font.GetSafeHandle() != 0)
-    m_font.DeleteObject();
-
-  GetToolBarCtrl().SetButtonSize(CSize(0,::GetSystemMetrics(SM_CYMENU)));
-
-  // Use the system menu font
-  NONCLIENTMETRICS ncm;
-  ncm.cbSize = sizeof ncm;
-  ::SystemParametersInfo(SPI_GETNONCLIENTMETRICS,ncm.cbSize,&ncm,0);
-  m_font.CreateFontIndirect(&ncm.lfMenuFont);
-  SetFont(&m_font);
-}
-
 bool MenuBar::AllowAltX(WPARAM wp)
 {
   if (m_filterAltX != NULL)
@@ -779,6 +777,26 @@ BEGIN_MESSAGE_MAP(MenuBarFrameWnd, CFrameWnd)
   ON_WM_MEASUREITEM()
   ON_WM_DRAWITEM()
 END_MESSAGE_MAP()
+
+void MenuBarFrameWnd::UpdateDPI(int dpi)
+{
+  if (m_menuBar.GetSafeHwnd() != 0)
+  {
+    m_menuBar.UpdateFont(dpi);
+    m_menuBar.Update();
+
+    // Reset the height of the menu bar band
+    REBARBANDINFO bandInfo = { 0 };
+    bandInfo.cbSize = sizeof bandInfo;
+    bandInfo.fMask = RBBIM_CHILDSIZE;
+    if (m_coolBar.GetReBarCtrl().GetBandInfo(0,&bandInfo))
+    {
+      CSize size = m_menuBar.CalcFixedLayout(FALSE,TRUE);
+      bandInfo.cyMinChild = size.cy;
+      m_coolBar.GetReBarCtrl().SetBandInfo(0,&bandInfo);
+    }
+  }
+}
 
 void MenuBarFrameWnd::OnMenuSelect(UINT id, UINT flags, HMENU menu)
 {
@@ -899,9 +917,9 @@ CMenu* MenuBarFrameWnd::GetMenu(void) const
 bool MenuBarFrameWnd::IsHighColour(void)
 {
   DWORD commonVer = MenuBar::GetDllVersion("comctl32.dll");
-  HDC dc = ::GetDC(NULL);
-  int colourDepth = ::GetDeviceCaps(dc,BITSPIXEL);
-  ::ReleaseDC(NULL,dc);
+  CDC* dc = GetDC();
+  int colourDepth = dc->GetDeviceCaps(BITSPIXEL);
+  ReleaseDC(dc);
   return ((commonVer >= DLLVERSION(6,0)) && (colourDepth >= 32));
 }
 
