@@ -22,6 +22,31 @@ namespace {
       return (*setThreadDpiAwarenessContext)(context);
     return 0;
   }
+
+  VOID* getMonitorFromWindow(CWnd* wnd)
+  {
+    typedef VOID*(__stdcall *PFNMONITORFROMWINDOW)(HWND, DWORD);
+
+    HMODULE user = getUser32();
+    PFNMONITORFROMWINDOW monitorFromWindow = (PFNMONITORFROMWINDOW)
+      ::GetProcAddress(user,"MonitorFromWindow");
+    if (monitorFromWindow != NULL)
+      return (*monitorFromWindow)(wnd->GetSafeHwnd(), MONITOR_DEFAULTTOPRIMARY);
+    return 0;
+  }
+
+  BOOL getMonitorInfo(VOID* monitor, MONITORINFO* monInfo)
+  {
+    typedef BOOL(__stdcall *PFNGETMONITORINFO)(VOID*, MONITORINFO*);
+
+    HMODULE user = getUser32();
+    PFNGETMONITORINFO getMonitorInfo = (PFNGETMONITORINFO)
+      ::GetProcAddress(user,"GetMonitorInfoA");
+    if (getMonitorInfo != NULL)
+      return (*getMonitorInfo)(monitor,monInfo);
+    return FALSE;
+  }
+
 } // unnamed namespace
 
 int DPI::getSystemDPI(void)
@@ -42,6 +67,8 @@ int DPI::getSystemDPI(void)
 
 int DPI::getWindowDPI(CWnd* wnd)
 {
+  ASSERT(wnd->GetSafeHwnd());
+
   typedef UINT(__stdcall *PFNGETDPIFORWINDOW)(HWND);
 
   HMODULE user = getUser32();
@@ -137,6 +164,21 @@ void DPI::disableDialogResize(CDialog* dlg)
     (*setDialogDpiChangeBehavior)(dlg->GetSafeHwnd(),2,2); // Set DDC_DISABLE_RESIZE
 }
 
+CRect DPI::getMonitorRect(CWnd* wnd)
+{
+  ASSERT(wnd);
+
+  VOID* monitor = getMonitorFromWindow(wnd);
+  if (monitor != 0)
+  {
+    MONITORINFO monInfo = { 0 };
+    monInfo.cbSize = sizeof monInfo;
+    if (getMonitorInfo(monitor,&monInfo))
+      return monInfo.rcMonitor;
+  }
+  return CRect(0,0,::GetSystemMetrics(SM_CXSCREEN),::GetSystemMetrics(SM_CYSCREEN));
+}
+
 DPI::ContextUnaware::ContextUnaware()
 {
   // DPI_AWARENESS_CONTEXT_UNAWARE
@@ -148,25 +190,35 @@ DPI::ContextUnaware::~ContextUnaware()
    setContext(m_context);
 }
 
-DPI::FontDialog::FontDialog(LPLOGFONT logFont, DWORD flags) : CFontDialog(logFont,flags)
+DPI::FontDialog::FontDialog(LOGFONT* logFont, DWORD flags, CWnd* parentWnd)
+  : CFontDialog(&m_intLogFont,flags,NULL,parentWnd), m_appLogFont(logFont)
 {
 }
 
 INT_PTR DPI::FontDialog::DoModal()
 {
-  int dpi = DPI::getWindowDPI(AfxGetMainWnd());
-  LONG lfHeight = m_cf.lpLogFont->lfHeight;
-  m_cf.lpLogFont->lfHeight = MulDiv(lfHeight,DPI::getSystemDPI(),dpi);
+  // Copy the application LOGFONT to the internal LOGFONT
+  memcpy(&m_intLogFont,m_appLogFont,sizeof(LOGFONT));
 
-  // DPI_AWARENESS_CONTEXT_SYSTEM_AWARE
-  void* context = setContext((VOID*)-2);
+  // Adjust the font height to be relative to the system DPI, not the window DPI
+  int dpi1 = DPI::getWindowDPI(m_pParentWnd);
+  m_intLogFont.lfHeight = MulDiv(m_intLogFont.lfHeight,DPI::getSystemDPI(),dpi1);
 
+  // Show the font dialog using the system DPI context
+  void* context = setContext((VOID*)-2); // DPI_AWARENESS_CONTEXT_SYSTEM_AWARE
   INT_PTR result = CFontDialog::DoModal();
   setContext(context);
 
   if (result == IDOK)
-    m_cf.lpLogFont->lfHeight = -MulDiv(m_cf.iPointSize,dpi,720);
-  else
-    m_cf.lpLogFont->lfHeight = lfHeight;
+  {
+    // Copy the internal LOGFONT to the application LOGFONT
+    memcpy(m_appLogFont,&m_intLogFont,sizeof(LOGFONT));
+
+    // Get the window DPI again, as it might have changed while the dialog was open
+    int dpi2 = DPI::getWindowDPI(m_pParentWnd);
+
+    // Set the new font height relative to the current window DPI, not the system DPI
+    m_appLogFont->lfHeight = -MulDiv(m_cf.iPointSize,dpi2,720);
+  }
   return result;
 }

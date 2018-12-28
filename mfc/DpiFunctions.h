@@ -8,6 +8,8 @@ namespace DPI
   bool createSystemMenuFont(CFont* font, int dpi);
   void disableDialogResize(CDialog* dlg);
 
+  CRect getMonitorRect(CWnd* wnd);
+
   class ContextUnaware
   {
   public:
@@ -21,7 +23,14 @@ namespace DPI
   class FontDialog : public CFontDialog
   {
   public:
-    FontDialog(LPLOGFONT logFont, DWORD flags);
+    FontDialog(LOGFONT* logFont, DWORD flags, CWnd* parentWnd);
 	  INT_PTR DoModal();
+
+  protected:
+    // The application LOGFONT structure: this is copied before the dialog
+    // opens, and updated only if the user closes the dialog by clicking OK.
+    LOGFONT* m_appLogFont;
+    // The internal LOGFONT structure passed to ChooseFont().
+    LOGFONT m_intLogFont;
   };
 } // namespace DPI
