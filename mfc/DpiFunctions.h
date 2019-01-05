@@ -1,5 +1,9 @@
 #pragma once
 
+#ifndef WM_DPICHANGED
+#define WM_DPICHANGED 0x02E0
+#endif
+
 namespace DPI
 {
   int getSystemDPI(void);
