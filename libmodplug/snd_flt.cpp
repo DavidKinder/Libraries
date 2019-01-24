@@ -13,7 +13,7 @@
 
 #ifndef NO_FILTER
 
-#ifdef MSC_VER
+#if defined(MSC_VER) && defined(_M_IX86) //XXXXDK Only for X86
 #define _ASM_MATH
 #endif
 
@@ -56,9 +56,9 @@ DWORD CSoundFile::CutOffToFrequency(UINT nCutOff, int flt_modifier) const
 	float Fc;
 
 	if (m_dwSongFlags & SONG_EXFILTERRANGE)
-		Fc = 110.0f * pow(2.0f, 0.25f + ((float)(nCutOff*(flt_modifier+256)))/(21.0f*512.0f));
+		Fc = (float)(110.0f * pow(2.0f, 0.25f + ((float)(nCutOff*(flt_modifier+256)))/(21.0f*512.0f)));
 	else
-		Fc = 110.0f * pow(2.0f, 0.25f + ((float)(nCutOff*(flt_modifier+256)))/(24.0f*512.0f));
+		Fc = (float)(110.0f * pow(2.0f, 0.25f + ((float)(nCutOff*(flt_modifier+256)))/(24.0f*512.0f)));
 	LONG freq = (LONG)Fc;
 	if (freq < 120) return 120;
 	if (freq > 10000) return 10000;
@@ -76,11 +76,11 @@ void CSoundFile::SetupChannelFilter(MODCHANNEL *pChn, BOOL bReset, int flt_modif
 	float fg, fb0, fb1;
 
 	fc *= (float)(2.0*3.14159265358/fs);
-	float dmpfac = pow(10.0f, -((24.0f / 128.0f)*(float)pChn->nResonance) / 20.0f);
+	float dmpfac = (float)pow(10.0f, -((24.0f / 128.0f)*(float)pChn->nResonance) / 20.0f);
 	float d = (1.0f-2.0f*dmpfac)* fc;
 	if (d>2.0) d = 2.0;
 	d = (2.0f*dmpfac - d)/fc;
-	float e = pow(1.0f/fc,2.0);
+	float e = (float)pow(1.0f/fc,2.0);
 
 	fg=1/(1+d+e);
 	fb0=(d+e+e)/(1+d+e);

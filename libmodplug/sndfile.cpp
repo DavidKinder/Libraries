@@ -1632,7 +1632,7 @@ DWORD CSoundFile::TransposeToFrequency(int transp, int ftune)
 	//---GCCFIX:  Removed assembly.
 	return (DWORD)(8363*pow(2.0, (transp*128+ftune)/(1536)));//XXXXDK
 
-#ifdef MSC_VER
+#if defined(MSC_VER) && defined(_M_IX86) //XXXXDK Only for X86
 	const float _fbase = 8363;
 	const float _factor = 1.0f/(12.0f*128.0f);
 	int result;
@@ -1672,7 +1672,7 @@ int CSoundFile::FrequencyToTranspose(DWORD freq)
 	//---GCCFIX:  Removed assembly.
 	return int(1536*(log(freq/8363.0)/log(2.0)));
 
-#ifdef MSC_VER
+#if defined(MSC_VER) && defined(_M_IX86) //XXXXDK Only for X86
 	const float _f1_8363 = 1.0f / 8363.0f;
 	const float _factor = 128 * 12;
 	LONG result;
