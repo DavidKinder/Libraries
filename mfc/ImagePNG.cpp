@@ -33,16 +33,39 @@ void ImagePNG::Draw(CDC* dc, const CPoint& pos) const
 {
   ASSERT(m_pixels);
 
-  BITMAPINFOHEADER bitmapInfo = { 0 };
-  bitmapInfo.biSize = sizeof bitmapInfo;
-  bitmapInfo.biWidth = m_size.cx;
-  bitmapInfo.biHeight = m_size.cy*-1;
-  bitmapInfo.biPlanes = 1;
-  bitmapInfo.biBitCount = 32;
-  bitmapInfo.biCompression = BI_RGB;
+  BITMAPINFOHEADER info = { 0 };
+  FillBitmapInfo(info);
   ::StretchDIBits(dc->GetSafeHdc(),pos.x,pos.y,m_size.cx,m_size.cy,
     0,0,m_size.cx,m_size.cy,m_pixels,
-    (LPBITMAPINFO)&bitmapInfo,DIB_RGB_COLORS,SRCCOPY);
+    (LPBITMAPINFO)&info,DIB_RGB_COLORS,SRCCOPY);
+}
+
+HBITMAP ImagePNG::CopyBitmap(CWnd* wnd) const
+{
+  ASSERT(m_pixels);
+
+  BITMAPINFOHEADER info = { 0 };
+  FillBitmapInfo(info);
+  BYTE* pixels = NULL;
+  CDC* dc = wnd->GetDC();
+  HBITMAP bitmap = ::CreateDIBSection(dc->GetSafeHdc(),(LPBITMAPINFO)&info,
+    DIB_RGB_COLORS,(VOID**)&pixels,NULL,0);
+  wnd->ReleaseDC(dc);
+  if (bitmap == 0)
+    return 0;
+
+  memcpy(pixels,m_pixels,m_size.cx*m_size.cy*sizeof(DWORD));
+  return bitmap;
+}
+
+void ImagePNG::FillBitmapInfo(BITMAPINFOHEADER& info) const
+{
+  info.biSize = sizeof info;
+  info.biWidth = m_size.cx;
+  info.biHeight = m_size.cy*-1;
+  info.biPlanes = 1;
+  info.biBitCount = 32;
+  info.biCompression = BI_RGB;
 }
 
 void ImagePNG::Clear(void)
@@ -155,10 +178,10 @@ bool ImagePNG::LoadResource(UINT resId)
     png_set_background(png_ptr,&backColour,PNG_BACKGROUND_GAMMA_SCREEN,0,1.0);
   }
 
-  m_pixels = new BYTE[m_size.cx*m_size.cy*4];
+  m_pixels = new BYTE[m_size.cx*m_size.cy*sizeof(DWORD)];
   pixelRows = new png_bytep[m_size.cy];
   for (int i = 0; i < (int)m_size.cy; i++)
-    pixelRows[i] = m_pixels+(m_size.cx*i*4);
+    pixelRows[i] = m_pixels+(m_size.cx*i*sizeof(DWORD));
   png_read_image(png_ptr,pixelRows);
   png_read_end(png_ptr,end_info);
   png_destroy_read_struct(&png_ptr,&info_ptr,&end_info);
@@ -246,10 +269,10 @@ bool ImagePNG::LoadFile(const char* name)
     png_set_background(png_ptr,&backColour,PNG_BACKGROUND_GAMMA_SCREEN,0,1.0);
   }
 
-  m_pixels = new BYTE[m_size.cx*m_size.cy*4];
+  m_pixels = new BYTE[m_size.cx*m_size.cy*sizeof(DWORD)];
   pixelRows = new png_bytep[m_size.cy];
   for (int i = 0; i < (int)m_size.cy; i++)
-    pixelRows[i] = m_pixels+(m_size.cx*i*4);
+    pixelRows[i] = m_pixels+(m_size.cx*i*sizeof(DWORD));
   png_read_image(png_ptr,pixelRows);
   png_read_end(png_ptr,end_info);
   png_destroy_read_struct(&png_ptr,&info_ptr,&end_info);
@@ -274,7 +297,7 @@ void ImagePNG::Scale(const ImagePNG& image, const CSize& size)
   ASSERT(image.m_pixels);
 
   Clear();
-  m_pixels = new BYTE[size.cx*size.cy*4];
+  m_pixels = new BYTE[size.cx*size.cy*sizeof(DWORD)];
   m_size = size;
 
 #ifdef INCLUDE_2PASS_SCALE

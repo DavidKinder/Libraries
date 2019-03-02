@@ -2,6 +2,10 @@
 
 #include <afxtempl.h>
 
+#ifndef NO_PNG
+#include "ImagePNG.h"
+#endif
+
 #define WM_MENUBAR_POPUP (WM_USER+0)
 
 typedef HRESULT (STDAPICALLTYPE* SETWINDOWTHEME)(HWND,LPCWSTR,LPCWSTR);
@@ -20,6 +24,7 @@ public:
   void SetFilterAltX(FilterAltX filter);
   BOOL Create(UINT id, CMenu* menu, CWnd* parent);
   void LoadBitmaps(CBitmap& bitmap, CToolBarCtrl& bar, CSize size, bool alpha);
+  void DeleteBitmaps(void);
   void Update(void);
   void UpdateFont(int dpi);
   CMenu* GetMenu(void) const;
@@ -98,6 +103,7 @@ protected:
 class MenuBarFrameWnd : public CFrameWnd
 {
 public:
+  MenuBarFrameWnd();
   void UpdateDPI(int dpi);
 
 protected: 
@@ -110,14 +116,26 @@ protected:
 
   BOOL PreTranslateMessage(MSG*);
 
-  virtual BOOL CreateMenuBar(UINT id, CMenu* menu);
-  virtual BOOL CreateBar(UINT id, UINT highId);
+  BOOL CreateMenuBar(UINT id, CMenu* menu);
+  BOOL CreateBar(UINT id, UINT highId);
   CMenu* GetMenu(void) const;
 
   bool IsHighColour(void);
   void LoadBitmap(CBitmap& bitmap, UINT id);
 
+  void GetButtonSizes(CSize& sizeImage, CSize& sizeButton);
+  void AdjustBarHeight(CToolBar& bar, int barIndex);
+
   CReBar m_coolBar;
   MenuBar m_menuBar;
   CToolBar m_toolBar;
+
+  int m_menuBarIndex;
+  int m_toolBarIndex;
+
+#ifndef NO_PNG
+  BOOL CreateBarDpi(UINT id, UINT imageId);
+
+  ImagePNG m_image;
+#endif
 };

@@ -51,16 +51,7 @@ MenuBar::MenuBar()
 
 MenuBar::~MenuBar()
 {
-  // Delete the contents of the bitmap mapping
-  UINT id;
-  Bitmap bitmap;
-  POSITION pos = m_bitmaps.GetStartPosition();
-  while (pos != NULL)
-  {
-    m_bitmaps.GetNextAssoc(pos,id,bitmap);
-    ::DeleteObject(bitmap.bitmap);
-    delete[] bitmap.initialBits;
-  }
+  DeleteBitmaps();
 }
 
 void MenuBar::SetUseF10(bool use)
@@ -201,6 +192,20 @@ void MenuBar::LoadBitmaps(CBitmap& bitmap, CToolBarCtrl& bar, CSize size, bool a
     }
   }
   dcFrom.SelectObject(oldFromBitmap);
+}
+
+void MenuBar::DeleteBitmaps(void)
+{
+  UINT id;
+  Bitmap bitmap;
+  POSITION pos = m_bitmaps.GetStartPosition();
+  while (pos != NULL)
+  {
+    m_bitmaps.GetNextAssoc(pos,id,bitmap);
+    ::DeleteObject(bitmap.bitmap);
+    delete[] bitmap.initialBits;
+  }
+  m_bitmaps.RemoveAll();
 }
 
 void MenuBar::Update(void)
@@ -778,23 +783,57 @@ BEGIN_MESSAGE_MAP(MenuBarFrameWnd, CFrameWnd)
   ON_WM_DRAWITEM()
 END_MESSAGE_MAP()
 
+MenuBarFrameWnd::MenuBarFrameWnd()
+{
+  m_menuBarIndex = -1;
+  m_toolBarIndex = -1;
+}
+
 void MenuBarFrameWnd::UpdateDPI(int dpi)
 {
+  CSize sizeImage, sizeButton;
+  GetButtonSizes(sizeImage,sizeButton);
+
+#ifndef NO_PNG
+  // Resize the toolbar
+  ImagePNG scaledImage;
+  if (m_toolBar.GetSafeHwnd() != 0)
+  {
+    if (m_image.Pixels())
+    {
+      CSize scaledSize = sizeImage;
+      scaledSize.cx *= m_toolBar.GetCount();
+      scaledImage.Scale(m_image,scaledSize);
+    }
+    if (scaledImage.Pixels())
+    {
+      if (m_toolBar.SetBitmap(scaledImage.CopyBitmap(this)))
+        m_toolBar.SetSizes(sizeButton,sizeImage);
+    }
+    AdjustBarHeight(m_toolBar,m_toolBarIndex);
+  }
+#endif
+
+  // Resize the menu bar
   if (m_menuBar.GetSafeHwnd() != 0)
   {
+#ifndef NO_PNG
+    if (scaledImage.Pixels())
+    {
+      ASSERT(m_toolBar.GetSafeHwnd() != 0);
+
+      CBitmap menuBitmap;
+      menuBitmap.Attach(scaledImage.CopyBitmap(this));
+      if (menuBitmap.GetSafeHandle() != 0)
+      {
+        m_menuBar.DeleteBitmaps();
+        m_menuBar.LoadBitmaps(menuBitmap,m_toolBar.GetToolBarCtrl(),sizeImage,true);
+      }
+    }
+#endif
     m_menuBar.UpdateFont(dpi);
     m_menuBar.Update();
-
-    // Reset the height of the menu bar band
-    REBARBANDINFO bandInfo = { 0 };
-    bandInfo.cbSize = sizeof bandInfo;
-    bandInfo.fMask = RBBIM_CHILDSIZE;
-    if (m_coolBar.GetReBarCtrl().GetBandInfo(0,&bandInfo))
-    {
-      CSize size = m_menuBar.CalcFixedLayout(FALSE,TRUE);
-      bandInfo.cyMinChild = size.cy;
-      m_coolBar.GetReBarCtrl().SetBandInfo(0,&bandInfo);
-    }
+    AdjustBarHeight(m_menuBar,m_menuBarIndex);
   }
 }
 
@@ -854,6 +893,7 @@ BOOL MenuBarFrameWnd::CreateMenuBar(UINT id, CMenu* menu)
     // the ordinary Windows menus.
     if (!m_coolBar.AddBar(&m_menuBar,NULL,NULL,RBBS_NOGRIPPER))
       return FALSE;
+    m_menuBarIndex = m_coolBar.GetReBarCtrl().GetBandCount()-1;
   }
   return TRUE;
 }
@@ -875,16 +915,17 @@ BOOL MenuBarFrameWnd::CreateBar(UINT id, UINT highId)
   // If a high colour bitmap identifier has been passed, add it to the toolbar
   if (highId != -1)
   {
-    CBitmap bitmap;
-    LoadBitmap(bitmap,highId);
-    if (!m_toolBar.SetBitmap((HBITMAP)bitmap.Detach()))
+    CBitmap tbarBitmap;
+    LoadBitmap(tbarBitmap,highId);
+    if (!m_toolBar.SetBitmap((HBITMAP)tbarBitmap.Detach()))
       return FALSE;
   }
 
   // Load the bitmap again for the menu icons
-  CBitmap bitmap;
-  LoadBitmap(bitmap,highId != -1 ? highId : id);
-  m_menuBar.LoadBitmaps(bitmap,m_toolBar.GetToolBarCtrl(),CSize(16,15),highId != -1);
+  CSize sizeImage(16,15);
+  CBitmap menuBitmap;
+  LoadBitmap(menuBitmap,highId != -1 ? highId : id);
+  m_menuBar.LoadBitmaps(menuBitmap,m_toolBar.GetToolBarCtrl(),sizeImage,highId != -1);
   if (!m_menuBar.Create(id,0,this))
     return FALSE;
 
@@ -901,11 +942,75 @@ BOOL MenuBarFrameWnd::CreateBar(UINT id, UINT highId)
     // the ordinary Windows menus.
     if (!m_coolBar.AddBar(&m_menuBar,NULL,NULL,RBBS_NOGRIPPER))
       return FALSE;
+    m_menuBarIndex = m_coolBar.GetReBarCtrl().GetBandCount()-1;
   }
   if (!m_coolBar.AddBar(&m_toolBar,NULL,NULL,RBBS_NOGRIPPER|RBBS_BREAK))
     return FALSE;
+  m_toolBarIndex = m_coolBar.GetReBarCtrl().GetBandCount()-1;
   return TRUE;
 }
+
+#ifndef NO_PNG
+BOOL MenuBarFrameWnd::CreateBarDpi(UINT id, UINT imageId)
+{
+  // Only use the image bitmap where supported
+  if (!IsHighColour())
+    return CreateBar(id,(UINT)-1);
+
+  // Create the toolbar and load the resource for it
+  if (!m_toolBar.CreateEx(this,TBSTYLE_FLAT|TBSTYLE_TRANSPARENT,
+    WS_CHILD|WS_VISIBLE|CBRS_ALIGN_TOP|CBRS_TOOLTIPS|CBRS_FLYBY))
+    return FALSE;
+  if (!m_toolBar.LoadToolBar(id))
+    return FALSE;
+
+  // Scale sizes for the DPI
+  CSize sizeImage, sizeButton;
+  GetButtonSizes(sizeImage,sizeButton);
+  m_toolBar.SetSizes(sizeButton,sizeImage);
+
+  // Load the image bitmap
+  if (!m_image.LoadResource(imageId))
+    return FALSE;
+
+  // Scale the image bitmap and add it to the toolbar and menu
+  CSize scaledSize = sizeImage;
+  scaledSize.cx *= m_toolBar.GetCount();
+  ImagePNG scaledImage;
+  scaledImage.Scale(m_image,scaledSize);
+  if (!m_toolBar.SetBitmap(scaledImage.CopyBitmap(this)))
+    return FALSE;
+  CBitmap menuBitmap;
+  menuBitmap.Attach(scaledImage.CopyBitmap(this));
+  if (menuBitmap.GetSafeHandle() == 0)
+    return FALSE;
+  m_menuBar.LoadBitmaps(menuBitmap,m_toolBar.GetToolBarCtrl(),sizeImage,true);
+
+  // Create the menu bar
+  if (!m_menuBar.Create(id,0,this))
+    return FALSE;
+
+  // Create the cool bar with an appropriate style
+  DWORD style = WS_CHILD|WS_VISIBLE|WS_CLIPSIBLINGS|WS_CLIPCHILDREN;
+  style |= (m_menuBar.GetSafeHwnd() != 0) ? CBRS_ALIGN_TOP : CBRS_TOP;
+  if (!m_coolBar.Create(this,0,style))
+    return FALSE;
+
+  // Add the menus and toolbar
+  if (m_menuBar.GetSafeHwnd() != 0)
+  {
+    // Only add the menu bar if it was created. If not, we are just using
+    // the ordinary Windows menus.
+    if (!m_coolBar.AddBar(&m_menuBar,NULL,NULL,RBBS_NOGRIPPER))
+      return FALSE;
+    m_menuBarIndex = m_coolBar.GetReBarCtrl().GetBandCount()-1;
+  }
+  if (!m_coolBar.AddBar(&m_toolBar,NULL,NULL,RBBS_NOGRIPPER|RBBS_BREAK))
+    return FALSE;
+  m_toolBarIndex = m_coolBar.GetReBarCtrl().GetBandCount()-1;
+  return TRUE;
+}
+#endif // NO_PNG
 
 CMenu* MenuBarFrameWnd::GetMenu(void) const
 {
@@ -928,4 +1033,25 @@ void MenuBarFrameWnd::LoadBitmap(CBitmap& bitmap, UINT id)
   bitmap.LoadBitmap(id);
   if (bitmap.GetSafeHandle() == 0)
     bitmap.Attach(::LoadBitmap(::GetModuleHandle(NULL),MAKEINTRESOURCE(id)));
+}
+
+void MenuBarFrameWnd::GetButtonSizes(CSize& sizeImage, CSize& sizeButton)
+{
+  int dpi = DPI::getWindowDPI(this);
+  sizeImage.cx = DPI::getSystemMetrics(SM_CXMENUCHECK,dpi);
+  sizeImage.cy = DPI::getSystemMetrics(SM_CYMENUCHECK,dpi);
+  sizeButton.cx = (sizeImage.cx*3)/2;
+  sizeButton.cy = (sizeImage.cy*3)/2;
+}
+
+void MenuBarFrameWnd::AdjustBarHeight(CToolBar& bar, int barIndex)
+{
+  if (barIndex >= 0)
+  {
+    REBARBANDINFO bandInfo = { 0 };
+    bandInfo.cbSize = sizeof bandInfo;
+    bandInfo.fMask = RBBIM_CHILDSIZE;
+    bandInfo.cyMinChild = bar.CalcFixedLayout(FALSE,TRUE).cy;
+    m_coolBar.GetReBarCtrl().SetBandInfo(barIndex,&bandInfo);
+  }
 }

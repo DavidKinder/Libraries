@@ -10,6 +10,7 @@ public:
   const CSize& Size(void) const;
   double AspectRatio(void) const;
   void Draw(CDC* dc, const CPoint& pos) const;
+  HBITMAP CopyBitmap(CWnd* wnd) const;
 
   void Clear(void);
   void SetBackground(COLORREF colour);
@@ -18,6 +19,8 @@ public:
   void Scale(const ImagePNG& image, const CSize& size);
 
 private:
+  void FillBitmapInfo(BITMAPINFOHEADER& info) const;
+
   bool m_back;
   COLORREF m_backColour;
 
