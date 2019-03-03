@@ -807,8 +807,8 @@ void MenuBarFrameWnd::UpdateDPI(int dpi)
     }
     if (scaledImage.Pixels())
     {
-      if (m_toolBar.SetBitmap(scaledImage.CopyBitmap(this)))
-        m_toolBar.SetSizes(sizeButton,sizeImage);
+      m_toolBar.SetSizes(sizeButton,sizeImage);
+      m_toolBar.SetBitmap(scaledImage.CopyBitmap(this));
     }
     AdjustBarHeight(m_toolBar,m_toolBarIndex);
   }
