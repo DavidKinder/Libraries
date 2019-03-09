@@ -112,6 +112,7 @@ protected:
   afx_msg void OnMenuSelect(UINT, UINT, HMENU);
   afx_msg void OnMeasureItem(int, LPMEASUREITEMSTRUCT);
   afx_msg void OnDrawItem(int, LPDRAWITEMSTRUCT);
+  afx_msg void OnSettingChange(UINT, LPCTSTR);
   DECLARE_MESSAGE_MAP()
 
   BOOL PreTranslateMessage(MSG*);
@@ -124,7 +125,7 @@ protected:
   void LoadBitmap(CBitmap& bitmap, UINT id);
 
   void GetButtonSizes(CSize& sizeImage, CSize& sizeButton);
-  void AdjustBarHeight(CToolBar& bar, int barIndex);
+  void SetBarSizes(void);
 
   CReBar m_coolBar;
   MenuBar m_menuBar;

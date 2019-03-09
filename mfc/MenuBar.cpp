@@ -781,6 +781,7 @@ BEGIN_MESSAGE_MAP(MenuBarFrameWnd, CFrameWnd)
   ON_WM_MENUSELECT()
   ON_WM_MEASUREITEM()
   ON_WM_DRAWITEM()
+  ON_WM_SETTINGCHANGE()
 END_MESSAGE_MAP()
 
 MenuBarFrameWnd::MenuBarFrameWnd()
@@ -810,7 +811,6 @@ void MenuBarFrameWnd::UpdateDPI(int dpi)
       m_toolBar.SetSizes(sizeButton,sizeImage);
       m_toolBar.SetBitmap(scaledImage.CopyBitmap(this));
     }
-    AdjustBarHeight(m_toolBar,m_toolBarIndex);
   }
 #endif
 
@@ -833,8 +833,8 @@ void MenuBarFrameWnd::UpdateDPI(int dpi)
 #endif
     m_menuBar.UpdateFont(dpi);
     m_menuBar.Update();
-    AdjustBarHeight(m_menuBar,m_menuBarIndex);
   }
+  SetBarSizes();
 }
 
 void MenuBarFrameWnd::OnMenuSelect(UINT id, UINT flags, HMENU menu)
@@ -860,6 +860,13 @@ void MenuBarFrameWnd::OnDrawItem(int id, LPDRAWITEMSTRUCT dis)
   if (m_menuBar.GetSafeHwnd() != 0)
     m_menuBar.OnDrawItem(dis);
   CFrameWnd::OnDrawItem(id,dis);
+}
+
+void MenuBarFrameWnd::OnSettingChange(UINT uiAction, LPCTSTR lpszSection)
+{
+  CFrameWnd::OnSettingChange(uiAction,lpszSection);
+  if (uiAction == SPI_SETNONCLIENTMETRICS)
+    SetBarSizes();
 }
 
 BOOL MenuBarFrameWnd::PreTranslateMessage(MSG* msg)
@@ -1005,9 +1012,11 @@ BOOL MenuBarFrameWnd::CreateBarDpi(UINT id, UINT imageId)
       return FALSE;
     m_menuBarIndex = m_coolBar.GetReBarCtrl().GetBandCount()-1;
   }
-  if (!m_coolBar.AddBar(&m_toolBar,NULL,NULL,RBBS_NOGRIPPER|RBBS_BREAK))
+  if (!m_coolBar.AddBar(&m_toolBar,NULL,NULL,RBBS_NOGRIPPER))
     return FALSE;
   m_toolBarIndex = m_coolBar.GetReBarCtrl().GetBandCount()-1;
+
+  SetBarSizes();
   return TRUE;
 }
 #endif // NO_PNG
@@ -1044,14 +1053,33 @@ void MenuBarFrameWnd::GetButtonSizes(CSize& sizeImage, CSize& sizeButton)
   sizeButton.cy = (sizeImage.cy*3)/2;
 }
 
-void MenuBarFrameWnd::AdjustBarHeight(CToolBar& bar, int barIndex)
+void MenuBarFrameWnd::SetBarSizes(void)
 {
-  if (barIndex >= 0)
+  REBARBANDINFO bandInfo = { 0 };
+  bandInfo.cbSize = sizeof bandInfo;
+  bandInfo.fMask = RBBIM_CHILDSIZE;
+
+  if (m_menuBar.GetSafeHwnd() != 0)
   {
-    REBARBANDINFO bandInfo = { 0 };
-    bandInfo.cbSize = sizeof bandInfo;
-    bandInfo.fMask = RBBIM_CHILDSIZE;
-    bandInfo.cyMinChild = bar.CalcFixedLayout(FALSE,TRUE).cy;
-    m_coolBar.GetReBarCtrl().SetBandInfo(barIndex,&bandInfo);
+    SIZE size;
+    m_menuBar.SendMessage(TB_GETMAXSIZE,0,(LPARAM)&size);
+    int dpi = DPI::getWindowDPI(this);
+    size.cx += DPI::getSystemMetrics(SM_CXMENUCHECK,dpi);
+
+    bandInfo.cxMinChild = size.cx;
+    bandInfo.cyMinChild = size.cy;
+    m_coolBar.GetReBarCtrl().SetBandInfo(m_menuBarIndex,&bandInfo);
   }
+
+  if (m_toolBar.GetSafeHwnd() != 0)
+  {
+    CSize size = m_toolBar.CalcFixedLayout(FALSE,TRUE);
+
+    bandInfo.cxMinChild = size.cx;
+    bandInfo.cyMinChild = size.cy;
+    m_coolBar.GetReBarCtrl().SetBandInfo(m_toolBarIndex,&bandInfo);
+  }
+
+  if (m_menuBar.GetSafeHwnd() != 0)
+    m_coolBar.GetReBarCtrl().MinimizeBand(m_menuBarIndex);
 }
