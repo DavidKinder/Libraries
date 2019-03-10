@@ -958,7 +958,7 @@ BOOL MenuBarFrameWnd::CreateBar(UINT id, UINT highId)
 }
 
 #ifndef NO_PNG
-BOOL MenuBarFrameWnd::CreateBarDpi(UINT id, UINT imageId)
+BOOL MenuBarFrameWnd::CreateNewBar(UINT id, UINT imageId)
 {
   // Only use the image bitmap where supported
   if (!IsHighColour())
@@ -979,6 +979,7 @@ BOOL MenuBarFrameWnd::CreateBarDpi(UINT id, UINT imageId)
   // Load the image bitmap
   if (!m_image.LoadResource(imageId))
     return FALSE;
+  m_image.Fill(::GetSysColor(COLOR_MENUTEXT));
 
   // Scale the image bitmap and add it to the toolbar and menu
   CSize scaledSize = sizeImage;

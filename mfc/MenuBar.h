@@ -135,7 +135,7 @@ protected:
   int m_toolBarIndex;
 
 #ifndef NO_PNG
-  BOOL CreateBarDpi(UINT id, UINT imageId);
+  BOOL CreateNewBar(UINT id, UINT imageId);
 
   ImagePNG m_image;
 #endif

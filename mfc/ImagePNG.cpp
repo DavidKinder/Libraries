@@ -76,6 +76,19 @@ void ImagePNG::Clear(void)
   m_aspect = 1.0;
 }
 
+void ImagePNG::Fill(COLORREF colour)
+{
+  BYTE r = GetRValue(colour);
+  BYTE g = GetGValue(colour);
+  BYTE b = GetBValue(colour);
+  for (size_t i = 0; i < m_size.cx*m_size.cy*sizeof(DWORD); i+= sizeof(DWORD))
+  {
+    m_pixels[i+0] = b;
+    m_pixels[i+1] = g;
+    m_pixels[i+2] = r;
+  }
+}
+
 void ImagePNG::SetBackground(COLORREF colour)
 {
   m_back = true;
