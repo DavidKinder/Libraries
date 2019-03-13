@@ -40,7 +40,6 @@ protected:
   DECLARE_DYNAMIC(MenuBar)
 
   afx_msg void OnMouseMove(UINT, CPoint);
-  afx_msg void OnSettingChange(UINT, LPCTSTR);
   afx_msg void OnCustomDraw(NMHDR*, LRESULT*);
   afx_msg void OnDropDown(NMHDR*, LRESULT*);
   afx_msg void OnHotItemChange(NMHDR*, LRESULT*);
@@ -109,6 +108,7 @@ public:
 protected: 
   DECLARE_DYNAMIC(MenuBarFrameWnd)
 
+  afx_msg int OnCreate(LPCREATESTRUCT lpCreateStruct);
   afx_msg void OnMenuSelect(UINT, UINT, HMENU);
   afx_msg void OnMeasureItem(int, LPMEASUREITEMSTRUCT);
   afx_msg void OnDrawItem(int, LPDRAWITEMSTRUCT);
@@ -123,6 +123,7 @@ protected:
 
   bool IsHighColour(void);
   void LoadBitmap(CBitmap& bitmap, UINT id);
+  COLORREF GetToolbarColour(void);
 
   void GetButtonSizes(CSize& sizeImage, CSize& sizeButton);
   void SetBarSizes(void);
@@ -139,4 +140,18 @@ protected:
 
   ImagePNG m_image;
 #endif
+
+  struct Settings
+  {
+    int menuY;
+    int menuImageX;
+    int menuImageY;
+    COLORREF menuText;
+
+    Settings();
+    Settings(int dpi);
+    bool operator!=(const Settings& set) const;
+  };
+
+  Settings m_currentSettings;
 };

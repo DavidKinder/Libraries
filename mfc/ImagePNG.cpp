@@ -109,7 +109,7 @@ namespace
     {
       PngDataIO* dataIO = (PngDataIO*)png_get_io_ptr(png_ptr);
       memcpy(data,dataIO->data+dataIO->offset,length);
-      dataIO->offset += length;
+      dataIO->offset += (ULONG)length;
     }
   };
 } // unnamed namespace

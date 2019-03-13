@@ -347,12 +347,6 @@ void MenuBar::OnMouseMove(UINT nFlags, CPoint pt)
   CToolBar::OnMouseMove(nFlags,pt);
 }
 
-void MenuBar::OnSettingChange(UINT uiAction, LPCTSTR)
-{
-  if (uiAction == SPI_SETNONCLIENTMETRICS)
-    UpdateFont(DPI::getWindowDPI(GetParent()));
-}
-
 void MenuBar::OnCustomDraw(NMHDR* nmhdr, LRESULT* result)
 {
   NMTBCUSTOMDRAW* nmtbcd = (NMTBCUSTOMDRAW*)nmhdr;
@@ -794,6 +788,7 @@ void MenuBarFrameWnd::UpdateDPI(int dpi)
 {
   CSize sizeImage, sizeButton;
   GetButtonSizes(sizeImage,sizeButton);
+  m_currentSettings = Settings(dpi);
 
 #ifndef NO_PNG
   // Resize the toolbar
@@ -802,6 +797,8 @@ void MenuBarFrameWnd::UpdateDPI(int dpi)
   {
     if (m_image.Pixels())
     {
+      m_image.Fill(GetToolbarColour());
+
       CSize scaledSize = sizeImage;
       scaledSize.cx *= m_toolBar.GetCount();
       scaledImage.Scale(m_image,scaledSize);
@@ -837,6 +834,12 @@ void MenuBarFrameWnd::UpdateDPI(int dpi)
   SetBarSizes();
 }
 
+int MenuBarFrameWnd::OnCreate(LPCREATESTRUCT lpCreateStruct)
+{
+  m_currentSettings = Settings(DPI::getWindowDPI(this));
+  return CFrameWnd::OnCreate(lpCreateStruct);
+}
+
 void MenuBarFrameWnd::OnMenuSelect(UINT id, UINT flags, HMENU menu)
 {
 #if (_MFC_VER == 0x700) // MFC bug
@@ -865,8 +868,10 @@ void MenuBarFrameWnd::OnDrawItem(int id, LPDRAWITEMSTRUCT dis)
 void MenuBarFrameWnd::OnSettingChange(UINT uiAction, LPCTSTR lpszSection)
 {
   CFrameWnd::OnSettingChange(uiAction,lpszSection);
-  if (uiAction == SPI_SETNONCLIENTMETRICS)
-    SetBarSizes();
+
+  int dpi = DPI::getWindowDPI(this);
+  if (m_currentSettings != Settings(dpi))
+    UpdateDPI(dpi);
 }
 
 BOOL MenuBarFrameWnd::PreTranslateMessage(MSG* msg)
@@ -979,7 +984,7 @@ BOOL MenuBarFrameWnd::CreateNewBar(UINT id, UINT imageId)
   // Load the image bitmap
   if (!m_image.LoadResource(imageId))
     return FALSE;
-  m_image.Fill(::GetSysColor(COLOR_MENUTEXT));
+  m_image.Fill(GetToolbarColour());
 
   // Scale the image bitmap and add it to the toolbar and menu
   CSize scaledSize = sizeImage;
@@ -1045,6 +1050,14 @@ void MenuBarFrameWnd::LoadBitmap(CBitmap& bitmap, UINT id)
     bitmap.Attach(::LoadBitmap(::GetModuleHandle(NULL),MAKEINTRESOURCE(id)));
 }
 
+COLORREF MenuBarFrameWnd::GetToolbarColour(void)
+{
+  COLORREF col = ::GetSysColor(COLOR_MENUTEXT);
+  if (col == RGB(0,0,0)) // Replace black with dark grey
+    col = RGB(64,64,64);
+  return col;
+}
+
 void MenuBarFrameWnd::GetButtonSizes(CSize& sizeImage, CSize& sizeButton)
 {
   int dpi = DPI::getWindowDPI(this);
@@ -1083,4 +1096,33 @@ void MenuBarFrameWnd::SetBarSizes(void)
 
   if (m_menuBar.GetSafeHwnd() != 0)
     m_coolBar.GetReBarCtrl().MinimizeBand(m_menuBarIndex);
+}
+
+MenuBarFrameWnd::Settings::Settings()
+{
+  menuY = 0;
+  menuImageX = 0;
+  menuImageY = 0;
+  menuText = 0;
+}
+
+MenuBarFrameWnd::Settings::Settings(int dpi)
+{
+  menuY = DPI::getSystemMetrics(SM_CYMENU,dpi);
+  menuImageX = DPI::getSystemMetrics(SM_CXMENUCHECK,dpi);
+  menuImageY = DPI::getSystemMetrics(SM_CYMENUCHECK,dpi);
+  menuText = ::GetSysColor(COLOR_MENUTEXT);
+}
+
+bool MenuBarFrameWnd::Settings::operator!=(const Settings& set) const
+{
+  if (menuY != set.menuY)
+    return true;
+  if (menuImageX != set.menuImageX)
+    return true;
+  if (menuImageY != set.menuImageY)
+    return true;
+  if (menuText != set.menuText)
+    return true;
+  return false;
 }
