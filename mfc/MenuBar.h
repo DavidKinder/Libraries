@@ -147,6 +147,7 @@ protected:
     int menuImageX;
     int menuImageY;
     COLORREF menuText;
+    int menuFontHeight;
 
     Settings();
     Settings(int dpi);

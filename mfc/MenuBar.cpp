@@ -1104,6 +1104,7 @@ MenuBarFrameWnd::Settings::Settings()
   menuImageX = 0;
   menuImageY = 0;
   menuText = 0;
+  menuFontHeight = 0;
 }
 
 MenuBarFrameWnd::Settings::Settings(int dpi)
@@ -1112,6 +1113,14 @@ MenuBarFrameWnd::Settings::Settings(int dpi)
   menuImageX = DPI::getSystemMetrics(SM_CXMENUCHECK,dpi);
   menuImageY = DPI::getSystemMetrics(SM_CYMENUCHECK,dpi);
   menuText = ::GetSysColor(COLOR_MENUTEXT);
+
+  CFont font;
+  if (DPI::createSystemMenuFont(&font,dpi))
+  {
+    LOGFONT lf;
+    font.GetLogFont(&lf);
+    menuFontHeight = lf.lfHeight;
+  }
 }
 
 bool MenuBarFrameWnd::Settings::operator!=(const Settings& set) const
@@ -1123,6 +1132,8 @@ bool MenuBarFrameWnd::Settings::operator!=(const Settings& set) const
   if (menuImageY != set.menuImageY)
     return true;
   if (menuText != set.menuText)
+    return true;
+  if (menuFontHeight != set.menuFontHeight)
     return true;
   return false;
 }
