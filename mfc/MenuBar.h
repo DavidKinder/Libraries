@@ -1,14 +1,11 @@
 #pragma once
 
-#include <afxtempl.h>
-
 #ifndef NO_PNG
 #include "ImagePNG.h"
 #endif
 
 #define WM_MENUBAR_POPUP (WM_APP+1000)
 
-typedef HRESULT (STDAPICALLTYPE* SETWINDOWTHEME)(HWND,LPCWSTR,LPCWSTR);
 typedef BOOL (WINAPI* GETMENUINFO)(HMENU,LPMENUINFO);
 typedef BOOL (WINAPI* SETMENUINFO)(HMENU,LPCMENUINFO);
 
@@ -28,13 +25,12 @@ public:
   void Update(void);
   void UpdateFont(int dpi);
   CMenu* GetMenu(void) const;
+  DWORD GetOS(void) const;
 
   BOOL TranslateFrameMessage(MSG* msg);
   void OnMenuSelect(HMENU menu, UINT flags);
   void OnMeasureItem(LPMEASUREITEMSTRUCT mis);
   void OnDrawItem(LPDRAWITEMSTRUCT mis);
-
-  static DWORD GetDllVersion(const char* dllName);
 
 protected: 
   DECLARE_DYNAMIC(MenuBar)
@@ -67,10 +63,9 @@ protected:
 
   static LRESULT CALLBACK InputFilter(int code, WPARAM wp, LPARAM lp);
 
-  OSVERSIONINFO m_osVer;
+  DWORD m_os;
   GETMENUINFO m_getMenuInfo;
   SETMENUINFO m_setMenuInfo;
-  bool m_useBitmaps;
   bool m_useF10;
   FilterAltX m_filterAltX;
 
@@ -118,14 +113,9 @@ protected:
   BOOL PreTranslateMessage(MSG*);
 
   BOOL CreateMenuBar(UINT id, CMenu* menu);
-  BOOL CreateBar(UINT id, UINT highId);
+  BOOL CreateBar(UINT id, UINT id32);
   CMenu* GetMenu(void) const;
-
-  bool IsHighColour(void);
   void LoadBitmap(CBitmap& bitmap, UINT id);
-  COLORREF GetToolbarColour(void);
-
-  void GetButtonSizes(CSize& sizeImage, CSize& sizeButton);
   void SetBarSizes(void);
 
   CReBar m_coolBar;
@@ -144,15 +134,16 @@ protected:
   struct Settings
   {
     int menuY;
-    int menuImageX;
-    int menuImageY;
-    COLORREF menuText;
     int menuFontHeight;
+    CSize sizeImage;
+    CSize sizeButton;
+    COLORREF colourBack;
+    COLORREF colourFore;
 
     Settings();
     Settings(int dpi);
     bool operator!=(const Settings& set) const;
   };
 
-  Settings m_currentSettings;
+  Settings m_settings;
 };

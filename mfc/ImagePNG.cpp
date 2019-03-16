@@ -89,6 +89,33 @@ void ImagePNG::Fill(COLORREF colour)
   }
 }
 
+void ImagePNG::Blend(COLORREF colour)
+{
+  BYTE r = GetRValue(colour);
+  BYTE g = GetGValue(colour);
+  BYTE b = GetBValue(colour);
+  for (size_t i = 0; i < m_size.cx*m_size.cy*sizeof(DWORD); i+= sizeof(DWORD))
+  {
+    BYTE a = m_pixels[i+3];
+    switch (a)
+    {
+    case 0x00:
+      m_pixels[i+0] = b;
+      m_pixels[i+1] = g;
+      m_pixels[i+2] = r;
+      break;
+    case 0xff:
+      break;
+    default:
+      m_pixels[i+0] = ((m_pixels[i+0]*a)+(b*(0xff-a)))>>8;
+      m_pixels[i+1] = ((m_pixels[i+1]*a)+(g*(0xff-a)))>>8;
+      m_pixels[i+2] = ((m_pixels[i+2]*a)+(r*(0xff-a)))>>8;
+      break;
+    }
+    m_pixels[i+3] = 0xff;
+  }
+}
+
 void ImagePNG::SetBackground(COLORREF colour)
 {
   m_back = true;

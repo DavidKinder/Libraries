@@ -14,6 +14,7 @@ public:
 
   void Clear(void);
   void Fill(COLORREF colour);
+  void Blend(COLORREF colour);
   void SetBackground(COLORREF colour);
   bool LoadResource(UINT resId);
   bool LoadFile(const char* name);

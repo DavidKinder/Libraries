@@ -2,13 +2,11 @@
 #include "MenuBar.h"
 #include "DpiFunctions.h"
 
-#include <shlwapi.h>
-
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #endif
 
-#define DLLVERSION(major,minor) MAKELONG(minor,major)
+#define OS_WINDOWS_XP MAKELONG(1,5)
 
 namespace {
 MenuBar* menuBar = NULL;
@@ -40,13 +38,13 @@ MenuBar::MenuBar()
   m_useF10 = true;
   m_filterAltX = NULL;
 
-  m_osVer.dwOSVersionInfoSize = sizeof m_osVer;
-  ::GetVersionEx(&m_osVer);
+  OSVERSIONINFO osVer = { sizeof(OSVERSIONINFO),0 };
+  ::GetVersionEx(&osVer);
+  m_os = MAKELONG(osVer.dwMinorVersion,osVer.dwMajorVersion);
 
   HMODULE user32 = ::LoadLibrary("user32.dll");
   m_getMenuInfo = (GETMENUINFO)::GetProcAddress(user32,"GetMenuInfo");
   m_setMenuInfo = (SETMENUINFO)::GetProcAddress(user32,"SetMenuInfo");
-  m_useBitmaps = ((m_getMenuInfo != NULL) && (m_setMenuInfo != NULL));
 }
 
 MenuBar::~MenuBar()
@@ -66,9 +64,9 @@ void MenuBar::SetFilterAltX(FilterAltX filter)
 
 BOOL MenuBar::Create(UINT id, CMenu* menu, CWnd* parent)
 {
-  // We need at least comctrl32 5.80. If not return true to indicate that the
+  // We need at least Windows XP. If not return true to indicate that the
   // program can carry on: it will simply get the original Windows menu instead.
-  if (GetDllVersion("comctl32.dll") < DLLVERSION(5,80))
+  if (m_os < OS_WINDOWS_XP)
     return TRUE;
 
   // Create the menu toolbar
@@ -81,11 +79,12 @@ BOOL MenuBar::Create(UINT id, CMenu* menu, CWnd* parent)
   UpdateFont(DPI::getWindowDPI(parent));
 
   // For Windows XP and earlier, disable theming so that the menu text colour can be set
-  if (m_osVer.dwMajorVersion < 6)
+  if (m_os <= OS_WINDOWS_XP)
   {
     HMODULE themes = ::LoadLibrary("uxtheme.dll");
     if (themes != 0)
     {
+      typedef HRESULT (STDAPICALLTYPE* SETWINDOWTHEME)(HWND,LPCWSTR,LPCWSTR);
       SETWINDOWTHEME setWindowTheme = (SETWINDOWTHEME)::GetProcAddress(themes,"SetWindowTheme");
       if (setWindowTheme != NULL)
         (*setWindowTheme)(GetSafeHwnd(),L"",L"");
@@ -107,7 +106,7 @@ BOOL MenuBar::Create(UINT id, CMenu* menu, CWnd* parent)
 
 void MenuBar::LoadBitmaps(CBitmap& bitmap, CToolBarCtrl& bar, CSize size, bool alpha)
 {
-  if (!m_useBitmaps)
+  if (!(m_getMenuInfo && m_setMenuInfo))
     return;
 
   // Create device contexts compatible with the display
@@ -128,9 +127,7 @@ void MenuBar::LoadBitmaps(CBitmap& bitmap, CToolBarCtrl& bar, CSize size, bool a
     if ((button.iBitmap >= 0) && ((button.fsStyle & TBSTYLE_SEP) == 0))
     {
       // Create a new button bitmap
-      BITMAPINFO bi;
-      ::ZeroMemory(&bi,sizeof bi);
-      bi.bmiHeader.biSize = sizeof (BITMAPINFOHEADER);
+      BITMAPINFO bi = { sizeof(BITMAPINFOHEADER),0 };
       bi.bmiHeader.biPlanes = 1;
       bi.bmiHeader.biBitCount = 32;
       bi.bmiHeader.biCompression = BI_RGB;
@@ -240,6 +237,11 @@ void MenuBar::UpdateFont(int dpi)
 CMenu* MenuBar::GetMenu(void) const
 {
   return const_cast<CMenu*>(&m_menu);
+}
+
+DWORD MenuBar::GetOS(void) const
+{
+  return m_os;
 }
 
 BOOL MenuBar::TranslateFrameMessage(MSG* msg)
@@ -667,7 +669,7 @@ int MenuBar::GetNextButton(int button, bool goBack)
 
 void MenuBar::SetBitmaps(CMenu* menu)
 {
-  if (!m_useBitmaps)
+  if (!(m_getMenuInfo && m_setMenuInfo))
     return;
 
   bool hasBitmap = false;
@@ -686,13 +688,12 @@ void MenuBar::SetBitmaps(CMenu* menu)
         Bitmap bitmap;
         if (m_bitmaps.Lookup(id,bitmap))
         {
-          MENUITEMINFO mii;
-          mii.cbSize = sizeof mii;
+          MENUITEMINFO mii = { sizeof MENUITEMINFO,0 };
           mii.fMask = MIIM_BITMAP;
 
           // Alpha bitmaps for menu items are only supported from Vista onwards:
           // for earlier Windows we will have to draw the bitmap ourselves.
-          if (m_osVer.dwMajorVersion < 6)
+          if (m_os <= OS_WINDOWS_XP)
             mii.hbmpItem = HBMMENU_CALLBACK;
           else
             mii.hbmpItem = bitmap.bitmap;
@@ -706,8 +707,7 @@ void MenuBar::SetBitmaps(CMenu* menu)
 
   if (hasBitmap)
   {
-    MENUINFO mi;
-    mi.cbSize = sizeof mi;
+    MENUINFO mi= { sizeof(MENUINFO),0 };
     mi.fMask = MIM_STYLE;
     (*m_getMenuInfo)(menu->GetSafeHmenu(),&mi);
     mi.dwStyle |= MNS_CHECKORBMP;
@@ -731,28 +731,6 @@ LRESULT CALLBACK MenuBar::InputFilter(int code, WPARAM wp, LPARAM lp)
       return TRUE;
   }
   return ::CallNextHookEx(msgHook,code,wp,lp);
-}
-
-DWORD MenuBar::GetDllVersion(const char* dllName)
-{
-  DWORD version = 0;
-
-  HINSTANCE dll = ::LoadLibrary(dllName);
-  if (dll != 0)
-  {
-    DLLGETVERSIONPROC dllGetVersion = (DLLGETVERSIONPROC)::GetProcAddress(dll,"DllGetVersion");
-    if (dllGetVersion != NULL)
-    {
-      DLLVERSIONINFO dvi;
-      ::ZeroMemory(&dvi,sizeof dvi);
-      dvi.cbSize = sizeof dvi;
-
-      if (SUCCEEDED((*dllGetVersion)(&dvi)))
-        version = DLLVERSION(dvi.dwMajorVersion,dvi.dwMinorVersion);
-    }
-    ::FreeLibrary(dll);
-  }
-  return version;
 }
 
 MenuBar::Bitmap::Bitmap() : size(0,0)
@@ -786,9 +764,7 @@ MenuBarFrameWnd::MenuBarFrameWnd()
 
 void MenuBarFrameWnd::UpdateDPI(int dpi)
 {
-  CSize sizeImage, sizeButton;
-  GetButtonSizes(sizeImage,sizeButton);
-  m_currentSettings = Settings(dpi);
+  m_settings = Settings(dpi);
 
 #ifndef NO_PNG
   // Resize the toolbar
@@ -797,15 +773,17 @@ void MenuBarFrameWnd::UpdateDPI(int dpi)
   {
     if (m_image.Pixels())
     {
-      m_image.Fill(GetToolbarColour());
+      m_image.Fill(m_settings.colourFore);
 
-      CSize scaledSize = sizeImage;
+      CSize scaledSize(m_settings.sizeImage);
       scaledSize.cx *= m_toolBar.GetCount();
       scaledImage.Scale(m_image,scaledSize);
+      if (m_menuBar.GetOS() < OS_WINDOWS_XP)
+        scaledImage.Blend(m_settings.colourBack);
     }
     if (scaledImage.Pixels())
     {
-      m_toolBar.SetSizes(sizeButton,sizeImage);
+      m_toolBar.SetSizes(m_settings.sizeButton,m_settings.sizeImage);
       m_toolBar.SetBitmap(scaledImage.CopyBitmap(this));
     }
   }
@@ -824,7 +802,7 @@ void MenuBarFrameWnd::UpdateDPI(int dpi)
       if (menuBitmap.GetSafeHandle() != 0)
       {
         m_menuBar.DeleteBitmaps();
-        m_menuBar.LoadBitmaps(menuBitmap,m_toolBar.GetToolBarCtrl(),sizeImage,true);
+        m_menuBar.LoadBitmaps(menuBitmap,m_toolBar.GetToolBarCtrl(),m_settings.sizeImage,true);
       }
     }
 #endif
@@ -836,7 +814,7 @@ void MenuBarFrameWnd::UpdateDPI(int dpi)
 
 int MenuBarFrameWnd::OnCreate(LPCREATESTRUCT lpCreateStruct)
 {
-  m_currentSettings = Settings(DPI::getWindowDPI(this));
+  m_settings = Settings(DPI::getWindowDPI(this));
   return CFrameWnd::OnCreate(lpCreateStruct);
 }
 
@@ -870,7 +848,7 @@ void MenuBarFrameWnd::OnSettingChange(UINT uiAction, LPCTSTR lpszSection)
   CFrameWnd::OnSettingChange(uiAction,lpszSection);
 
   int dpi = DPI::getWindowDPI(this);
-  if (m_currentSettings != Settings(dpi))
+  if (m_settings != Settings(dpi))
     UpdateDPI(dpi);
 }
 
@@ -910,12 +888,16 @@ BOOL MenuBarFrameWnd::CreateMenuBar(UINT id, CMenu* menu)
   return TRUE;
 }
 
-BOOL MenuBarFrameWnd::CreateBar(UINT id, UINT highId)
+BOOL MenuBarFrameWnd::CreateBar(UINT id, UINT id32)
 {
-  // Only use high colour bitmaps if using at least common controls
-  // version 6 on a 32 bit colour display
-  if (!IsHighColour())
-    highId = (UINT)-1;
+  // Only use 32-bit bitmaps if at least Windows XP with 32-bit colour
+  if (m_menuBar.GetOS() < OS_WINDOWS_XP)
+    id32 = (UINT)-1;
+  CDC* dc = GetDC();
+  int depth = dc->GetDeviceCaps(BITSPIXEL);
+  ReleaseDC(dc);
+  if (depth < 32)
+    id32 = (UINT)-1;
 
   // Create the toolbar and load the resource for it
   if (!m_toolBar.CreateEx(this,TBSTYLE_FLAT|TBSTYLE_TRANSPARENT,
@@ -924,11 +906,11 @@ BOOL MenuBarFrameWnd::CreateBar(UINT id, UINT highId)
   if (!m_toolBar.LoadToolBar(id))
     return FALSE;
 
-  // If a high colour bitmap identifier has been passed, add it to the toolbar
-  if (highId != -1)
+  // If given a 32-bit bitmap, add it to the toolbar
+  if (id32 != -1)
   {
     CBitmap tbarBitmap;
-    LoadBitmap(tbarBitmap,highId);
+    LoadBitmap(tbarBitmap,id32);
     if (!m_toolBar.SetBitmap((HBITMAP)tbarBitmap.Detach()))
       return FALSE;
   }
@@ -936,8 +918,8 @@ BOOL MenuBarFrameWnd::CreateBar(UINT id, UINT highId)
   // Load the bitmap again for the menu icons
   CSize sizeImage(16,15);
   CBitmap menuBitmap;
-  LoadBitmap(menuBitmap,highId != -1 ? highId : id);
-  m_menuBar.LoadBitmaps(menuBitmap,m_toolBar.GetToolBarCtrl(),sizeImage,highId != -1);
+  LoadBitmap(menuBitmap,id32 != -1 ? id32 : id);
+  m_menuBar.LoadBitmaps(menuBitmap,m_toolBar.GetToolBarCtrl(),sizeImage,id32 != -1);
   if (!m_menuBar.Create(id,0,this))
     return FALSE;
 
@@ -965,10 +947,6 @@ BOOL MenuBarFrameWnd::CreateBar(UINT id, UINT highId)
 #ifndef NO_PNG
 BOOL MenuBarFrameWnd::CreateNewBar(UINT id, UINT imageId)
 {
-  // Only use the image bitmap where supported
-  if (!IsHighColour())
-    return CreateBar(id,(UINT)-1);
-
   // Create the toolbar and load the resource for it
   if (!m_toolBar.CreateEx(this,TBSTYLE_FLAT|TBSTYLE_TRANSPARENT,
     WS_CHILD|WS_VISIBLE|CBRS_ALIGN_TOP|CBRS_TOOLTIPS|CBRS_FLYBY))
@@ -977,27 +955,30 @@ BOOL MenuBarFrameWnd::CreateNewBar(UINT id, UINT imageId)
     return FALSE;
 
   // Scale sizes for the DPI
-  CSize sizeImage, sizeButton;
-  GetButtonSizes(sizeImage,sizeButton);
-  m_toolBar.SetSizes(sizeButton,sizeImage);
+  m_settings = Settings(DPI::getWindowDPI(this));
+  m_toolBar.SetSizes(m_settings.sizeButton,m_settings.sizeImage);
 
   // Load the image bitmap
   if (!m_image.LoadResource(imageId))
     return FALSE;
-  m_image.Fill(GetToolbarColour());
+  m_image.Fill(m_settings.colourFore);
 
-  // Scale the image bitmap and add it to the toolbar and menu
-  CSize scaledSize = sizeImage;
+  // Scale the image bitmap
+  CSize scaledSize(m_settings.sizeImage);
   scaledSize.cx *= m_toolBar.GetCount();
   ImagePNG scaledImage;
   scaledImage.Scale(m_image,scaledSize);
+  if (m_menuBar.GetOS() < OS_WINDOWS_XP)
+    scaledImage.Blend(m_settings.colourBack);
+
+  // Add the scaled bitmap to the toolbar and menu
   if (!m_toolBar.SetBitmap(scaledImage.CopyBitmap(this)))
     return FALSE;
   CBitmap menuBitmap;
   menuBitmap.Attach(scaledImage.CopyBitmap(this));
   if (menuBitmap.GetSafeHandle() == 0)
     return FALSE;
-  m_menuBar.LoadBitmaps(menuBitmap,m_toolBar.GetToolBarCtrl(),sizeImage,true);
+  m_menuBar.LoadBitmaps(menuBitmap,m_toolBar.GetToolBarCtrl(),m_settings.sizeImage,true);
 
   // Create the menu bar
   if (!m_menuBar.Create(id,0,this))
@@ -1034,15 +1015,6 @@ CMenu* MenuBarFrameWnd::GetMenu(void) const
   return CFrameWnd::GetMenu();
 }
 
-bool MenuBarFrameWnd::IsHighColour(void)
-{
-  DWORD commonVer = MenuBar::GetDllVersion("comctl32.dll");
-  CDC* dc = GetDC();
-  int colourDepth = dc->GetDeviceCaps(BITSPIXEL);
-  ReleaseDC(dc);
-  return ((commonVer >= DLLVERSION(6,0)) && (colourDepth >= 32));
-}
-
 void MenuBarFrameWnd::LoadBitmap(CBitmap& bitmap, UINT id)
 {
   bitmap.LoadBitmap(id);
@@ -1050,27 +1022,9 @@ void MenuBarFrameWnd::LoadBitmap(CBitmap& bitmap, UINT id)
     bitmap.Attach(::LoadBitmap(::GetModuleHandle(NULL),MAKEINTRESOURCE(id)));
 }
 
-COLORREF MenuBarFrameWnd::GetToolbarColour(void)
-{
-  COLORREF col = ::GetSysColor(COLOR_MENUTEXT);
-  if (col == RGB(0,0,0)) // Replace black with dark grey
-    col = RGB(64,64,64);
-  return col;
-}
-
-void MenuBarFrameWnd::GetButtonSizes(CSize& sizeImage, CSize& sizeButton)
-{
-  int dpi = DPI::getWindowDPI(this);
-  sizeImage.cx = DPI::getSystemMetrics(SM_CXMENUCHECK,dpi);
-  sizeImage.cy = DPI::getSystemMetrics(SM_CYMENUCHECK,dpi);
-  sizeButton.cx = (sizeImage.cx*3)/2;
-  sizeButton.cy = (sizeImage.cy*3)/2;
-}
-
 void MenuBarFrameWnd::SetBarSizes(void)
 {
-  REBARBANDINFO bandInfo = { 0 };
-  bandInfo.cbSize = sizeof bandInfo;
+  REBARBANDINFO bandInfo = { sizeof(REBARBANDINFO),0 };
   bandInfo.fMask = RBBIM_CHILDSIZE;
 
   if (m_menuBar.GetSafeHwnd() != 0)
@@ -1101,19 +1055,14 @@ void MenuBarFrameWnd::SetBarSizes(void)
 MenuBarFrameWnd::Settings::Settings()
 {
   menuY = 0;
-  menuImageX = 0;
-  menuImageY = 0;
-  menuText = 0;
   menuFontHeight = 0;
+  colourBack = 0;
+  colourFore = 0;
 }
 
 MenuBarFrameWnd::Settings::Settings(int dpi)
 {
   menuY = DPI::getSystemMetrics(SM_CYMENU,dpi);
-  menuImageX = DPI::getSystemMetrics(SM_CXMENUCHECK,dpi);
-  menuImageY = DPI::getSystemMetrics(SM_CYMENUCHECK,dpi);
-  menuText = ::GetSysColor(COLOR_MENUTEXT);
-
   CFont font;
   if (DPI::createSystemMenuFont(&font,dpi))
   {
@@ -1121,19 +1070,32 @@ MenuBarFrameWnd::Settings::Settings(int dpi)
     font.GetLogFont(&lf);
     menuFontHeight = lf.lfHeight;
   }
+
+  sizeImage.cx = DPI::getSystemMetrics(SM_CXMENUCHECK,dpi);
+  sizeImage.cy = DPI::getSystemMetrics(SM_CYMENUCHECK,dpi);
+  sizeButton.cx = (sizeImage.cx*3)/2;
+  sizeButton.cy = (sizeImage.cy*3)/2;
+
+  // Replace black with dark grey
+  colourBack = ::GetSysColor(COLOR_BTNFACE);
+  colourFore = ::GetSysColor(COLOR_BTNTEXT);
+  if (colourFore == RGB(0,0,0))
+    colourFore = RGB(64,64,64);
 }
 
 bool MenuBarFrameWnd::Settings::operator!=(const Settings& set) const
 {
   if (menuY != set.menuY)
     return true;
-  if (menuImageX != set.menuImageX)
-    return true;
-  if (menuImageY != set.menuImageY)
-    return true;
-  if (menuText != set.menuText)
-    return true;
   if (menuFontHeight != set.menuFontHeight)
+    return true;
+  if (sizeImage != set.sizeImage)
+    return true;
+  if (sizeButton != set.sizeButton)
+    return true;
+  if (colourBack != set.colourBack)
+    return true;
+  if (colourFore != set.colourFore)
     return true;
   return false;
 }
