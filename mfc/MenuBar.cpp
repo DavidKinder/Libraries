@@ -62,6 +62,11 @@ void MenuBar::SetFilterAltX(FilterAltX filter)
   m_filterAltX = filter;
 }
 
+void MenuBar::AddNoIconId(UINT id)
+{
+  m_noIconIds.Add(id);
+}
+
 BOOL MenuBar::Create(UINT id, CMenu* menu, CWnd* parent)
 {
   // We need at least Windows XP. If not return true to indicate that the
@@ -126,6 +131,16 @@ void MenuBar::LoadBitmaps(CBitmap& bitmap, CToolBarCtrl& bar, CSize size, bool a
     // Check that the button has a bitmap and is not a separator
     if ((button.iBitmap >= 0) && ((button.fsStyle & TBSTYLE_SEP) == 0))
     {
+      // Skip excluded menu items
+      bool skip = false;
+      for (int i = 0; i < m_noIconIds.GetSize(); i++)
+      {
+        if (button.idCommand == m_noIconIds[i])
+          skip = true;
+      }
+      if (skip)
+        continue;
+
       // Create a new button bitmap
       BITMAPINFO bi = { sizeof(BITMAPINFOHEADER),0 };
       bi.bmiHeader.biPlanes = 1;
@@ -189,6 +204,14 @@ void MenuBar::LoadBitmaps(CBitmap& bitmap, CToolBarCtrl& bar, CSize size, bool a
     }
   }
   dcFrom.SelectObject(oldFromBitmap);
+}
+
+void MenuBar::LoadBitmaps(ImagePNG& images, CToolBarCtrl& bar, CSize size)
+{
+  CBitmap menuBitmap;
+  menuBitmap.Attach(images.CopyBitmap(&bar));
+  if (menuBitmap.GetSafeHandle())
+    LoadBitmaps(menuBitmap,bar,size,true);
 }
 
 void MenuBar::DeleteBitmaps(void)
@@ -766,46 +789,41 @@ void MenuBarFrameWnd::UpdateDPI(int dpi)
 {
   m_settings = Settings(dpi);
 
-#ifndef NO_PNG
   // Resize the toolbar
-  ImagePNG scaledImage;
+  ImagePNG normalImage, disabledImage;
   if (m_toolBar.GetSafeHwnd() != 0)
   {
     if (m_image.Pixels())
     {
-      m_image.Fill(m_settings.colourFore);
-
       CSize scaledSize(m_settings.sizeImage);
       scaledSize.cx *= m_toolBar.GetCount();
-      scaledImage.Scale(m_image,scaledSize);
+      normalImage.Scale(m_image,scaledSize);
+      disabledImage.Copy(normalImage);
+
+      normalImage.Fill(m_settings.colourFore);
+      disabledImage.Fill(m_settings.colourDisable);
       if (m_menuBar.GetOS() < OS_WINDOWS_XP)
-        scaledImage.Blend(m_settings.colourBack);
+      {
+        normalImage.Blend(m_settings.colourBack);
+        disabledImage.Blend(m_settings.colourBack);
+      }
     }
-    if (scaledImage.Pixels())
+    if (normalImage.Pixels() && disabledImage.Pixels())
     {
       m_toolBar.SetSizes(m_settings.sizeButton,m_settings.sizeImage);
-      m_toolBar.SetBitmap(scaledImage.CopyBitmap(this));
+      LoadBitmaps(normalImage,disabledImage);
     }
   }
-#endif
 
   // Resize the menu bar
   if (m_menuBar.GetSafeHwnd() != 0)
   {
-#ifndef NO_PNG
-    if (scaledImage.Pixels())
+    if (normalImage.Pixels())
     {
       ASSERT(m_toolBar.GetSafeHwnd() != 0);
-
-      CBitmap menuBitmap;
-      menuBitmap.Attach(scaledImage.CopyBitmap(this));
-      if (menuBitmap.GetSafeHandle() != 0)
-      {
-        m_menuBar.DeleteBitmaps();
-        m_menuBar.LoadBitmaps(menuBitmap,m_toolBar.GetToolBarCtrl(),m_settings.sizeImage,true);
-      }
+      m_menuBar.DeleteBitmaps();
+      m_menuBar.LoadBitmaps(normalImage,m_toolBar.GetToolBarCtrl(),m_settings.sizeImage);
     }
-#endif
     m_menuBar.UpdateFont(dpi);
     m_menuBar.Update();
   }
@@ -944,7 +962,6 @@ BOOL MenuBarFrameWnd::CreateBar(UINT id, UINT id32)
   return TRUE;
 }
 
-#ifndef NO_PNG
 BOOL MenuBarFrameWnd::CreateNewBar(UINT id, UINT imageId)
 {
   // Create the toolbar and load the resource for it
@@ -961,24 +978,26 @@ BOOL MenuBarFrameWnd::CreateNewBar(UINT id, UINT imageId)
   // Load the image bitmap
   if (!m_image.LoadResource(imageId))
     return FALSE;
-  m_image.Fill(m_settings.colourFore);
 
   // Scale the image bitmap
+  ImagePNG normalImage, disabledImage;
   CSize scaledSize(m_settings.sizeImage);
   scaledSize.cx *= m_toolBar.GetCount();
-  ImagePNG scaledImage;
-  scaledImage.Scale(m_image,scaledSize);
+  normalImage.Scale(m_image,scaledSize);
+  disabledImage.Copy(normalImage);
+
+  // Colour the image bitmaps appropriately
+  normalImage.Fill(m_settings.colourFore);
+  disabledImage.Fill(m_settings.colourDisable);
   if (m_menuBar.GetOS() < OS_WINDOWS_XP)
-    scaledImage.Blend(m_settings.colourBack);
+  {
+    normalImage.Blend(m_settings.colourBack);
+    disabledImage.Blend(m_settings.colourBack);
+  }
 
   // Add the scaled bitmap to the toolbar and menu
-  if (!m_toolBar.SetBitmap(scaledImage.CopyBitmap(this)))
-    return FALSE;
-  CBitmap menuBitmap;
-  menuBitmap.Attach(scaledImage.CopyBitmap(this));
-  if (menuBitmap.GetSafeHandle() == 0)
-    return FALSE;
-  m_menuBar.LoadBitmaps(menuBitmap,m_toolBar.GetToolBarCtrl(),m_settings.sizeImage,true);
+  LoadBitmaps(normalImage,disabledImage);
+  m_menuBar.LoadBitmaps(normalImage,m_toolBar.GetToolBarCtrl(),m_settings.sizeImage);
 
   // Create the menu bar
   if (!m_menuBar.Create(id,0,this))
@@ -1006,7 +1025,18 @@ BOOL MenuBarFrameWnd::CreateNewBar(UINT id, UINT imageId)
   SetBarSizes();
   return TRUE;
 }
-#endif // NO_PNG
+
+void MenuBarFrameWnd::LoadBitmaps(ImagePNG& normal, ImagePNG& disabled)
+{
+  m_toolBar.SetBitmap(normal.CopyBitmap(this));
+  HIMAGELIST disabledList = ::ImageList_Create(
+    m_settings.sizeImage.cx,m_settings.sizeImage.cy,ILC_COLOR32,0,5);
+  if (disabledList)
+  {
+    if (::ImageList_Add(disabledList,disabled.CopyBitmap(this),0) >= 0)
+      m_toolBar.GetToolBarCtrl().SetDisabledImageList(CImageList::FromHandle(disabledList));
+  }
+}
 
 CMenu* MenuBarFrameWnd::GetMenu(void) const
 {
@@ -1058,6 +1088,7 @@ MenuBarFrameWnd::Settings::Settings()
   menuFontHeight = 0;
   colourBack = 0;
   colourFore = 0;
+  colourDisable = 0;
 }
 
 MenuBarFrameWnd::Settings::Settings(int dpi)
@@ -1081,6 +1112,7 @@ MenuBarFrameWnd::Settings::Settings(int dpi)
   colourFore = ::GetSysColor(COLOR_BTNTEXT);
   if (colourFore == RGB(0,0,0))
     colourFore = RGB(64,64,64);
+  colourDisable = ::GetSysColor(COLOR_GRAYTEXT);
 }
 
 bool MenuBarFrameWnd::Settings::operator!=(const Settings& set) const
@@ -1096,6 +1128,8 @@ bool MenuBarFrameWnd::Settings::operator!=(const Settings& set) const
   if (colourBack != set.colourBack)
     return true;
   if (colourFore != set.colourFore)
+    return true;
+  if (colourDisable != set.colourDisable)
     return true;
   return false;
 }

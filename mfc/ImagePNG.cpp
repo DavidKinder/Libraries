@@ -76,6 +76,18 @@ void ImagePNG::Clear(void)
   m_aspect = 1.0;
 }
 
+void ImagePNG::Copy(const ImagePNG& from)
+{
+  Clear();
+
+  m_back = from.m_back;
+  m_backColour = from.m_backColour;
+  m_size = from.m_size;
+  m_pixels = new BYTE[m_size.cx*m_size.cy*sizeof(DWORD)];
+  memcpy(m_pixels,from.m_pixels,m_size.cx*m_size.cy*sizeof(DWORD));
+  m_aspect = from.m_aspect;
+}
+
 void ImagePNG::Fill(COLORREF colour)
 {
   BYTE r = GetRValue(colour);
@@ -121,6 +133,8 @@ void ImagePNG::SetBackground(COLORREF colour)
   m_back = true;
   m_backColour = colour;
 }
+
+#ifndef NO_LIBPNG
 
 #include <png.h>
 #pragma warning(disable : 4611)
@@ -351,3 +365,5 @@ void ImagePNG::Scale(const ImagePNG& image, const CSize& size)
     (COLORREF*)m_pixels,size.cx,size.cy);
 #endif
 }
+
+#endif // NO_LIBPNG

@@ -1,8 +1,6 @@
 #pragma once
 
-#ifndef NO_PNG
 #include "ImagePNG.h"
-#endif
 
 #define WM_MENUBAR_POPUP (WM_APP+1000)
 
@@ -19,6 +17,7 @@ public:
 
   void SetUseF10(bool use);
   void SetFilterAltX(FilterAltX filter);
+  void AddNoIconId(UINT id);
   BOOL Create(UINT id, CMenu* menu, CWnd* parent);
   void LoadBitmaps(CBitmap& bitmap, CToolBarCtrl& bar, CSize size, bool alpha);
   void DeleteBitmaps(void);
@@ -26,6 +25,8 @@ public:
   void UpdateFont(int dpi);
   CMenu* GetMenu(void) const;
   DWORD GetOS(void) const;
+
+  void LoadBitmaps(ImagePNG& images, CToolBarCtrl& bar, CSize size);
 
   BOOL TranslateFrameMessage(MSG* msg);
   void OnMenuSelect(HMENU menu, UINT flags);
@@ -68,6 +69,7 @@ protected:
   SETMENUINFO m_setMenuInfo;
   bool m_useF10;
   FilterAltX m_filterAltX;
+  CArray<int> m_noIconIds;
 
   CMenu m_menu;
   CFont m_font;
@@ -118,6 +120,9 @@ protected:
   void LoadBitmap(CBitmap& bitmap, UINT id);
   void SetBarSizes(void);
 
+  BOOL CreateNewBar(UINT id, UINT imageId);
+  void LoadBitmaps(ImagePNG& normal, ImagePNG& disabled);
+
   CReBar m_coolBar;
   MenuBar m_menuBar;
   CToolBar m_toolBar;
@@ -125,11 +130,7 @@ protected:
   int m_menuBarIndex;
   int m_toolBarIndex;
 
-#ifndef NO_PNG
-  BOOL CreateNewBar(UINT id, UINT imageId);
-
   ImagePNG m_image;
-#endif
 
   struct Settings
   {
@@ -139,6 +140,7 @@ protected:
     CSize sizeButton;
     COLORREF colourBack;
     COLORREF colourFore;
+    COLORREF colourDisable;
 
     Settings();
     Settings(int dpi);

@@ -13,6 +13,7 @@ public:
   HBITMAP CopyBitmap(CWnd* wnd) const;
 
   void Clear(void);
+  void Copy(const ImagePNG& from);
   void Fill(COLORREF colour);
   void Blend(COLORREF colour);
   void SetBackground(COLORREF colour);
