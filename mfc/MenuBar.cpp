@@ -964,6 +964,10 @@ BOOL MenuBarFrameWnd::CreateBar(UINT id, UINT id32)
 
 BOOL MenuBarFrameWnd::CreateNewBar(UINT id, UINT imageId)
 {
+  // On old versions of Windows, use the old menu and toolbars
+  if (m_menuBar.GetOS() < OS_WINDOWS_XP)
+    return CreateBar(id,(UINT)-1);
+
   // Create the toolbar and load the resource for it
   if (!m_toolBar.CreateEx(this,TBSTYLE_FLAT|TBSTYLE_TRANSPARENT,
     WS_CHILD|WS_VISIBLE|CBRS_ALIGN_TOP|CBRS_TOOLTIPS|CBRS_FLYBY))
@@ -1010,14 +1014,9 @@ BOOL MenuBarFrameWnd::CreateNewBar(UINT id, UINT imageId)
     return FALSE;
 
   // Add the menus and toolbar
-  if (m_menuBar.GetSafeHwnd() != 0)
-  {
-    // Only add the menu bar if it was created. If not, we are just using
-    // the ordinary Windows menus.
-    if (!m_coolBar.AddBar(&m_menuBar,NULL,NULL,RBBS_NOGRIPPER))
-      return FALSE;
-    m_menuBarIndex = m_coolBar.GetReBarCtrl().GetBandCount()-1;
-  }
+  if (!m_coolBar.AddBar(&m_menuBar,NULL,NULL,RBBS_NOGRIPPER))
+    return FALSE;
+  m_menuBarIndex = m_coolBar.GetReBarCtrl().GetBandCount()-1;
   if (!m_coolBar.AddBar(&m_toolBar,NULL,NULL,RBBS_NOGRIPPER))
     return FALSE;
   m_toolBarIndex = m_coolBar.GetReBarCtrl().GetBandCount()-1;
