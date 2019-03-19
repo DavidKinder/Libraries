@@ -138,7 +138,6 @@ protected:
     int menuFontHeight;
     CSize sizeImage;
     CSize sizeButton;
-    COLORREF colourBack;
     COLORREF colourFore;
     COLORREF colourDisable;
 

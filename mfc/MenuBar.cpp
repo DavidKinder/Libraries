@@ -802,11 +802,6 @@ void MenuBarFrameWnd::UpdateDPI(int dpi)
 
       normalImage.Fill(m_settings.colourFore);
       disabledImage.Fill(m_settings.colourDisable);
-      if (m_menuBar.GetOS() < OS_WINDOWS_XP)
-      {
-        normalImage.Blend(m_settings.colourBack);
-        disabledImage.Blend(m_settings.colourBack);
-      }
     }
     if (normalImage.Pixels() && disabledImage.Pixels())
     {
@@ -993,11 +988,6 @@ BOOL MenuBarFrameWnd::CreateNewBar(UINT id, UINT imageId)
   // Colour the image bitmaps appropriately
   normalImage.Fill(m_settings.colourFore);
   disabledImage.Fill(m_settings.colourDisable);
-  if (m_menuBar.GetOS() < OS_WINDOWS_XP)
-  {
-    normalImage.Blend(m_settings.colourBack);
-    disabledImage.Blend(m_settings.colourBack);
-  }
 
   // Add the scaled bitmap to the toolbar and menu
   LoadBitmaps(normalImage,disabledImage);
@@ -1085,7 +1075,6 @@ MenuBarFrameWnd::Settings::Settings()
 {
   menuY = 0;
   menuFontHeight = 0;
-  colourBack = 0;
   colourFore = 0;
   colourDisable = 0;
 }
@@ -1107,7 +1096,6 @@ MenuBarFrameWnd::Settings::Settings(int dpi)
   sizeButton.cy = (sizeImage.cy*3)/2;
 
   // Replace black with dark grey
-  colourBack = ::GetSysColor(COLOR_BTNFACE);
   colourFore = ::GetSysColor(COLOR_BTNTEXT);
   if (colourFore == RGB(0,0,0))
     colourFore = RGB(64,64,64);
@@ -1123,8 +1111,6 @@ bool MenuBarFrameWnd::Settings::operator!=(const Settings& set) const
   if (sizeImage != set.sizeImage)
     return true;
   if (sizeButton != set.sizeButton)
-    return true;
-  if (colourBack != set.colourBack)
     return true;
   if (colourFore != set.colourFore)
     return true;
