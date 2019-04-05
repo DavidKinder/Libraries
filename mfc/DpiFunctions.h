@@ -13,6 +13,7 @@ namespace DPI
   void disableDialogResize(CDialog* dlg);
 
   CRect getMonitorRect(CWnd* wnd);
+  CRect getMonitorWorkRect(CWnd* wnd);
 
   class ContextUnaware
   {

@@ -166,8 +166,6 @@ void DPI::disableDialogResize(CDialog* dlg)
 
 CRect DPI::getMonitorRect(CWnd* wnd)
 {
-  ASSERT(wnd);
-
   VOID* monitor = getMonitorFromWindow(wnd);
   if (monitor != 0)
   {
@@ -176,6 +174,23 @@ CRect DPI::getMonitorRect(CWnd* wnd)
     if (getMonitorInfo(monitor,&monInfo))
       return monInfo.rcMonitor;
   }
+  return CRect(0,0,::GetSystemMetrics(SM_CXSCREEN),::GetSystemMetrics(SM_CYSCREEN));
+}
+
+CRect DPI::getMonitorWorkRect(CWnd* wnd)
+{
+  VOID* monitor = getMonitorFromWindow(wnd);
+  if (monitor != 0)
+  {
+    MONITORINFO monInfo = { 0 };
+    monInfo.cbSize = sizeof monInfo;
+    if (getMonitorInfo(monitor,&monInfo))
+      return monInfo.rcWork;
+  }
+
+  CRect workArea;
+  if (SystemParametersInfo(SPI_GETWORKAREA,0,&workArea,0) != FALSE)
+    return workArea;
   return CRect(0,0,::GetSystemMetrics(SM_CXSCREEN),::GetSystemMetrics(SM_CYSCREEN));
 }
 
