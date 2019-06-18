@@ -153,7 +153,7 @@ bool DPI::createSystemMenuFont(CFont* font, int dpi)
   return false;
 }
 
-void DPI::disableDialogResize(CDialog* dlg)
+void DPI::disableDialogDPI(CDialog* dlg)
 {
   typedef BOOL(__stdcall *PFNSETDIALOGDPICHANGEBEHAVIOR)(HWND, int, int);
 
@@ -161,7 +161,7 @@ void DPI::disableDialogResize(CDialog* dlg)
   PFNSETDIALOGDPICHANGEBEHAVIOR setDialogDpiChangeBehavior = (PFNSETDIALOGDPICHANGEBEHAVIOR)
     ::GetProcAddress(user,"SetDialogDpiChangeBehavior");
   if (setDialogDpiChangeBehavior != NULL)
-    (*setDialogDpiChangeBehavior)(dlg->GetSafeHwnd(),2,2); // Set DDC_DISABLE_RESIZE
+    (*setDialogDpiChangeBehavior)(dlg->GetSafeHwnd(),1,1); // Set DDC_DISABLE_ALL
 }
 
 CRect DPI::getMonitorRect(CWnd* wnd)
@@ -201,6 +201,17 @@ DPI::ContextUnaware::ContextUnaware()
 }
 
 DPI::ContextUnaware::~ContextUnaware()
+{
+   setContext(m_context);
+}
+
+DPI::ContextSystem::ContextSystem()
+{
+  // DPI_AWARENESS_CONTEXT_SYSTEM_AWARE
+  m_context = setContext((VOID*)-2); 
+}
+
+DPI::ContextSystem::~ContextSystem()
 {
    setContext(m_context);
 }

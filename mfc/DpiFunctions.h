@@ -10,7 +10,7 @@ namespace DPI
   int getWindowDPI(CWnd* wnd);
   int getSystemMetrics(int metric, int dpi);
   bool createSystemMenuFont(CFont* font, int dpi);
-  void disableDialogResize(CDialog* dlg);
+  void disableDialogDPI(CDialog* dlg);
 
   CRect getMonitorRect(CWnd* wnd);
   CRect getMonitorWorkRect(CWnd* wnd);
@@ -20,6 +20,16 @@ namespace DPI
   public:
     ContextUnaware();
     ~ContextUnaware();
+
+  private:
+    void* m_context;
+  };
+
+  class ContextSystem
+  {
+  public:
+    ContextSystem();
+    ~ContextSystem();
 
   private:
     void* m_context;
