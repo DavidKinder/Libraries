@@ -1171,7 +1171,11 @@ MenuBarFrameWnd::Settings::Settings(int dpi)
   }
 
   sizeImage.cx = DPI::getSystemMetrics(SM_CXMENUCHECK,dpi);
+  if (sizeImage.cx < 16)
+    sizeImage.cx = 16;
   sizeImage.cy = DPI::getSystemMetrics(SM_CYMENUCHECK,dpi);
+  if (sizeImage.cy < 16)
+    sizeImage.cy = 16;
   sizeButton.cx = (sizeImage.cx*3)/2;
   sizeButton.cy = (sizeImage.cy*3)/2;
 
