@@ -770,6 +770,86 @@ MenuBar::Bitmap::Bitmap(HBITMAP bitmap_, SIZE size_, DWORD* bits_, DWORD* initia
   initialBits = initialBits_;
 }
 
+// Internal CToolBar data structure
+struct CToolBarData
+{
+  WORD wVersion;
+  WORD wWidth;
+  WORD wHeight;
+  WORD wItemCount;
+
+  WORD* items()
+  {
+    return (WORD*)(this+1);
+  }
+};
+
+BOOL BitmapToolBar::LoadToolBar(UINT id)
+{
+  return LoadToolBar(MAKEINTRESOURCE(id));
+}
+
+BOOL BitmapToolBar::LoadToolBar(LPCTSTR resName)
+{
+  HINSTANCE inst = AfxFindResourceHandle(resName,RT_TOOLBAR);
+  HRSRC rsrc = ::FindResource(inst,resName,RT_TOOLBAR);
+  if (rsrc == NULL)
+  {
+    inst = ::GetModuleHandle(NULL);
+    rsrc = ::FindResource(inst,resName,RT_TOOLBAR);
+  }
+  if (rsrc == NULL)
+    return FALSE;
+
+  HGLOBAL globalRes = LoadResource(inst,rsrc);
+  if (globalRes == NULL)
+    return FALSE;
+
+  CToolBarData* data = (CToolBarData*)LockResource(globalRes);
+  if (data == NULL)
+    return FALSE;
+  ASSERT(data->wVersion == 1);
+
+  UINT* items = new UINT[data->wItemCount];
+  for (int i = 0; i < data->wItemCount; i++)
+    items[i] = data->items()[i];
+  BOOL result = SetButtons(items,data->wItemCount);
+  delete[] items;
+
+  if (result)
+  {
+    CSize sizeImage(data->wWidth,data->wHeight);
+    CSize sizeButton(data->wWidth+7,data->wHeight+7);
+    SetSizes(sizeButton,sizeImage);
+    result = LoadBitmap(resName);
+  }
+
+  ::UnlockResource(globalRes);
+  ::FreeResource(globalRes);
+  return result;
+}
+
+BOOL BitmapToolBar::LoadBitmap(LPCTSTR resName)
+{
+  HINSTANCE inst = AfxFindResourceHandle(resName,RT_BITMAP);
+  HRSRC rsrc = ::FindResource(inst,resName,RT_BITMAP);
+  if (rsrc == NULL)
+  {
+    inst = ::GetModuleHandle(NULL);
+    rsrc = ::FindResource(inst,resName,RT_BITMAP);
+  }
+  if (rsrc == NULL)
+    return FALSE;
+
+  HBITMAP image = AfxLoadSysColorBitmap(inst,rsrc);
+  if (!AddReplaceBitmap(image))
+    return FALSE;
+
+  m_hInstImageWell = inst;
+  m_hRsrcImageWell = rsrc;
+  return TRUE;
+}
+
 IMPLEMENT_DYNAMIC(MenuBarFrameWnd, CFrameWnd)
 
 BEGIN_MESSAGE_MAP(MenuBarFrameWnd, CFrameWnd)

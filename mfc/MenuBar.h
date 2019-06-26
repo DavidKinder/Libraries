@@ -96,6 +96,18 @@ protected:
   CPoint m_mouse;
 };
 
+class BitmapToolBar : public CToolBar
+{
+public:
+  BitmapToolBar()
+  {
+  }
+
+  BOOL LoadToolBar(UINT id);
+  BOOL LoadToolBar(LPCTSTR resName);
+  BOOL LoadBitmap(LPCTSTR resName);
+};
+
 class MenuBarFrameWnd : public CFrameWnd
 {
 public:
@@ -125,7 +137,7 @@ protected:
 
   CReBar m_coolBar;
   MenuBar m_menuBar;
-  CToolBar m_toolBar;
+  BitmapToolBar m_toolBar;
 
   int m_menuBarIndex;
   int m_toolBarIndex;
