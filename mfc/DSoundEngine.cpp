@@ -70,13 +70,20 @@ CDSoundEngine::~CDSoundEngine()
 }
 
 // Initialize the DirectSound sound engine
-bool CDSoundEngine::Initialize(void (*pThreadCallback)(void))
+bool CDSoundEngine::Initialize(ThreadCall pCallback, CWnd* notifyWnd, UINT notifyMsg)
 {
   if (m_Status != STATUS_NOT_INIT)
     return true;
 
   // Save the thread callback
-  m_pThreadCallback = pThreadCallback;
+  m_pThreadCallback = pCallback;
+
+  // Save the notification message, if any
+  if (notifyWnd && notifyMsg)
+  {
+    m_iNotifyMsg = notifyMsg;
+    m_hNotifyWnd = notifyWnd->GetSafeHwnd();
+  }
 
   // Create an event for signalling the background thread
   m_hEvent = ::CreateEvent(NULL,FALSE,FALSE,NULL);
@@ -222,6 +229,7 @@ UINT CDSoundEngine::BackgroundThread(LPVOID)
     if (::WaitForSingleObject(SoundEngine.m_hEvent,100) == WAIT_OBJECT_0)
       return 0;
 
+    bool notify = false;
     {
       // Get the lock on the list of playing sounds
       CSingleLock Lock(GetSoundLock(),TRUE);
@@ -235,7 +243,10 @@ UINT CDSoundEngine::BackgroundThread(LPVOID)
 
         // Check if the sound has finished, otherwise write more sample data
         if (pSound->IsSoundOver(Tick))
+        {
           pSound->DestroyBuffer();
+          notify = true;
+        }
         else
           pSound->FillBuffer(pSound->GetWriteSize());
       }
@@ -244,6 +255,10 @@ UINT CDSoundEngine::BackgroundThread(LPVOID)
     // If a callback has been specified, call it (with no locks held)
     if (SoundEngine.m_pThreadCallback != NULL)
       (*(SoundEngine.m_pThreadCallback))();
+
+    // Post a message to notify that a sound has stopped
+    if (notify && SoundEngine.m_iNotifyMsg)
+      ::PostMessage(SoundEngine.m_hNotifyWnd,SoundEngine.m_iNotifyMsg,0,0);
   }
   return 0;
 }

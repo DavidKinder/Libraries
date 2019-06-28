@@ -39,7 +39,9 @@ public:
   WAVEFORMATEX& GetPrimaryFormat(void);
   LPDIRECTSOUND GetInterface(void);
 
-  bool Initialize(void (*pThreadCallback)(void) = NULL);
+  typedef void (*ThreadCall)(void);
+
+  bool Initialize(ThreadCall pCallback = NULL, CWnd* notifyWnd = NULL, UINT notifyMsg = 0);
   void Destroy(void);
   void StopThread(void);
 
@@ -61,10 +63,13 @@ protected:
   LPDIRECTSOUND m_IDSound;
   LPDIRECTSOUNDBUFFER m_IDBuffer;
 
+  UINT m_iNotifyMsg;
+  HWND m_hNotifyWnd;
+
   // Background thread
   HANDLE m_hEvent;
   CWinThread* m_pThread;
-  void (*m_pThreadCallback)(void);
+  ThreadCall m_pThreadCallback;
 
   // Array of playing sounds
   CCriticalSection m_SoundLock;
