@@ -3,7 +3,7 @@
 #ifndef TWO_PASS_SCALE_H_
 #define TWO_PASS_SCALE_H_
 
-#include <cmath>
+#include <math.h>
 
 #define FILTER_PI  (3.1415926535897932384626433832795f)
 #define FILTER_2PI (2.0f * 3.1415926535897932384626433832795f)
