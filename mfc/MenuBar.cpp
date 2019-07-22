@@ -850,6 +850,111 @@ BOOL BitmapToolBar::LoadBitmap(LPCTSTR resName)
   return TRUE;
 }
 
+void BitmapToolBar::SetButtonStyle(int idx, UINT style)
+{
+  TBBUTTON button;
+  _GetButton(idx,&button);
+  if (button.fsStyle != (BYTE)LOWORD(style) || button.fsState != (BYTE)HIWORD(style))
+  {
+    button.fsStyle = (BYTE)LOWORD(style);
+    button.fsState = (BYTE)HIWORD(style);
+    _SetButtonNoRecalc(idx,&button);
+    m_bDelayedButtonLayout = TRUE;
+  }
+}
+
+void BitmapToolBar::_SetButtonNoRecalc(int idx, TBBUTTON* newButton)
+{
+  TBBUTTON button;
+  VERIFY(DefWindowProc(TB_GETBUTTON,idx,(LPARAM)&button));
+
+  button.bReserved[0] = 0;
+  button.bReserved[1] = 0;
+  newButton->fsState ^= TBSTATE_ENABLED;
+  newButton->bReserved[0] = 0;
+  newButton->bReserved[1] = 0;
+
+  if (memcmp(newButton,&button,sizeof(TBBUTTON)) != 0)
+  {
+    DWORD style = GetStyle();
+    ModifyStyle(WS_VISIBLE,0);
+    VERIFY(DefWindowProc(TB_DELETEBUTTON,idx,0));
+    VERIFY(DefWindowProc(TB_INSERTBUTTON,idx,(LPARAM)newButton));
+    ModifyStyle(0,style & WS_VISIBLE);
+
+    if (((newButton->fsStyle ^ button.fsStyle) & TBSTYLE_SEP) ||
+        ((newButton->fsStyle & TBSTYLE_SEP) && newButton->iBitmap != button.iBitmap))
+    {
+      Invalidate();
+    }
+    else
+    {
+      CRect rect;
+      if (DefWindowProc(TB_GETITEMRECT,idx,(LPARAM)&rect))
+        InvalidateRect(rect);
+    }
+  }
+}
+
+class BitmapToolBarCmdUI : public CCmdUI
+{
+public:
+  virtual void Enable(BOOL on);
+  virtual void SetCheck(int check);
+  virtual void SetText(LPCTSTR) {}
+};
+
+void BitmapToolBarCmdUI::Enable(BOOL on)
+{
+  m_bEnableChanged = TRUE;
+  BitmapToolBar* toolBar = (BitmapToolBar*)m_pOther;
+
+  UINT newStyle = toolBar->GetButtonStyle(m_nIndex) & ~TBBS_DISABLED;
+  if (!on)
+  {
+    newStyle |= TBBS_DISABLED;
+    newStyle &= ~TBBS_PRESSED;
+  }
+  toolBar->SetButtonStyle(m_nIndex,newStyle);
+}
+
+void BitmapToolBarCmdUI::SetCheck(int check)
+{
+  BitmapToolBar* toolBar = (BitmapToolBar*)m_pOther;
+
+  UINT newStyle = toolBar->GetButtonStyle(m_nIndex) & ~(TBBS_CHECKED|TBBS_INDETERMINATE);
+  if (check == 1)
+    newStyle |= TBBS_CHECKED;
+  else if (check == 2)
+    newStyle |= TBBS_INDETERMINATE;
+  toolBar->SetButtonStyle(m_nIndex,newStyle|TBBS_CHECKBOX);
+}
+
+void BitmapToolBar::OnUpdateCmdUI(CFrameWnd* target, BOOL disableIfNo)
+{
+  BitmapToolBarCmdUI state;
+  state.m_pOther = this;
+
+  state.m_nIndexMax = (UINT)DefWindowProc(TB_BUTTONCOUNT,0,0);
+  for (state.m_nIndex = 0; state.m_nIndex < state.m_nIndexMax; state.m_nIndex++)
+  {
+    TBBUTTON button;
+    _GetButton(state.m_nIndex,&button);
+    state.m_nID = button.idCommand;
+
+    if (!(button.fsStyle & TBSTYLE_SEP))
+    {
+      if (CWnd::OnCmdMsg(0,
+        MAKELONG(CN_UPDATE_COMMAND_UI & 0xffff,WM_COMMAND+WM_REFLECT_BASE),&state,NULL))
+        continue;
+      if (CWnd::OnCmdMsg(state.m_nID,CN_UPDATE_COMMAND_UI,&state,NULL))
+        continue;
+      state.DoUpdate(target,disableIfNo);
+    }
+  }
+  UpdateDialogControls(target,disableIfNo);
+}
+
 IMPLEMENT_DYNAMIC(MenuBarFrameWnd, CFrameWnd)
 
 BEGIN_MESSAGE_MAP(MenuBarFrameWnd, CFrameWnd)

@@ -106,6 +106,13 @@ public:
   BOOL LoadToolBar(UINT id);
   BOOL LoadToolBar(LPCTSTR resName);
   BOOL LoadBitmap(LPCTSTR resName);
+
+  void SetButtonStyle(int idx, UINT style);
+
+  virtual void OnUpdateCmdUI(CFrameWnd* target, BOOL disableIfNo);
+
+protected:
+  void _SetButtonNoRecalc(int idx, TBBUTTON* newButton);
 };
 
 class MenuBarFrameWnd : public CFrameWnd
