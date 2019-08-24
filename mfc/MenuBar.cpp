@@ -795,6 +795,11 @@ BOOL BitmapToolBar::LoadToolBar(LPCTSTR resName)
   HRSRC rsrc = ::FindResource(inst,resName,RT_TOOLBAR);
   if (rsrc == NULL)
   {
+    inst = AfxGetInstanceHandle();
+    rsrc = ::FindResource(inst,resName,RT_TOOLBAR);
+  }
+  if (rsrc == NULL)
+  {
     inst = ::GetModuleHandle(NULL);
     rsrc = ::FindResource(inst,resName,RT_TOOLBAR);
   }
@@ -833,6 +838,11 @@ BOOL BitmapToolBar::LoadBitmap(LPCTSTR resName)
 {
   HINSTANCE inst = AfxFindResourceHandle(resName,RT_BITMAP);
   HRSRC rsrc = ::FindResource(inst,resName,RT_BITMAP);
+  if (rsrc == NULL)
+  {
+    inst = AfxGetInstanceHandle();
+    rsrc = ::FindResource(inst,resName,RT_BITMAP);
+  }
   if (rsrc == NULL)
   {
     inst = ::GetModuleHandle(NULL);
