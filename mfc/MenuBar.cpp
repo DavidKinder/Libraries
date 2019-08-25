@@ -1152,10 +1152,15 @@ BOOL MenuBarFrameWnd::CreateBar(UINT id, UINT id32)
   return TRUE;
 }
 
+BOOL MenuBarFrameWnd::UseNewBar(void)
+{
+  return (m_menuBar.GetOS() >= OS_WINDOWS_XP);
+}
+
 BOOL MenuBarFrameWnd::CreateNewBar(UINT id, UINT imageId)
 {
   // On old versions of Windows, use the old menu and toolbars
-  if (m_menuBar.GetOS() < OS_WINDOWS_XP)
+  if (!UseNewBar())
     return CreateBar(id,(UINT)-1);
 
   // Create the toolbar and load the resource for it

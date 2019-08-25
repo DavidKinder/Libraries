@@ -139,6 +139,7 @@ protected:
   void LoadBitmap(CBitmap& bitmap, UINT id);
   void SetBarSizes(void);
 
+  BOOL UseNewBar(void);
   BOOL CreateNewBar(UINT id, UINT imageId);
   void LoadBitmaps(ImagePNG& normal, ImagePNG& disabled);
 
