@@ -159,10 +159,16 @@ bool ImagePNG::LoadResource(UINT resId)
 {
   Clear();
 
-  HRSRC res = ::FindResource(NULL,MAKEINTRESOURCE(resId),"PNG");
+  HINSTANCE inst = AfxGetInstanceHandle();
+  HRSRC res = ::FindResource(inst,MAKEINTRESOURCE(resId),"PNG");
+  if (!res)
+  {
+    inst = 0;
+    res = ::FindResource(inst,MAKEINTRESOURCE(resId),"PNG");
+  }
   if (!res)
     return false;
-  HGLOBAL resData = ::LoadResource(NULL,res);
+  HGLOBAL resData = ::LoadResource(inst,res);
   if (!resData)
     return false;
   BYTE* pngData = (BYTE*)::LockResource(resData);
