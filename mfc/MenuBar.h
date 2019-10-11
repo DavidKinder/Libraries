@@ -61,6 +61,7 @@ protected:
   int GetNextButton(int button, bool goBack);
   void SetBitmaps(CMenu* menu);
   bool AllowAltX(WPARAM wp);
+  DWORD GetDllVersion(const char* dllName);
 
   static LRESULT CALLBACK InputFilter(int code, WPARAM wp, LPARAM lp);
 

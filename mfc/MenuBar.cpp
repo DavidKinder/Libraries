@@ -42,6 +42,9 @@ MenuBar::MenuBar()
   ::GetVersionEx(&osVer);
   m_os = MAKELONG(osVer.dwMinorVersion,osVer.dwMajorVersion);
 
+  if (GetDllVersion("comctl32.dll") < MAKELONG(0,6))
+    m_os = MAKELONG(0,4); // As if before Windows XP ...
+
   HMODULE user32 = ::LoadLibrary("user32.dll");
   m_getMenuInfo = (GETMENUINFO)::GetProcAddress(user32,"GetMenuInfo");
   m_setMenuInfo = (SETMENUINFO)::GetProcAddress(user32,"SetMenuInfo");
@@ -743,6 +746,28 @@ bool MenuBar::AllowAltX(WPARAM wp)
   if (m_filterAltX != NULL)
     return (*m_filterAltX)((char)wp);
   return true;
+}
+
+DWORD MenuBar::GetDllVersion(const char* dllName)
+{
+  DWORD version = 0;
+
+  HINSTANCE dll = ::LoadLibrary(dllName);
+  if (dll != 0)
+  {
+    DLLGETVERSIONPROC dllGetVersion = (DLLGETVERSIONPROC)::GetProcAddress(dll,"DllGetVersion");
+    if (dllGetVersion != NULL)
+    {
+      DLLVERSIONINFO dvi;
+      ::ZeroMemory(&dvi,sizeof dvi);
+      dvi.cbSize = sizeof dvi;
+
+      if (SUCCEEDED((*dllGetVersion)(&dvi)))
+        version = MAKELONG(dvi.dwMinorVersion,dvi.dwMajorVersion);
+    }
+    ::FreeLibrary(dll);
+  }
+  return version;
 }
 
 LRESULT CALLBACK MenuBar::InputFilter(int code, WPARAM wp, LPARAM lp)
