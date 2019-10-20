@@ -1009,6 +1009,13 @@ void MenuBarFrameWnd::UpdateDPI(int dpi)
 {
   m_settings = Settings(dpi);
 
+  if (m_menuBar.GetOS() < OS_WINDOWS_XP)
+  {
+    if (m_menuBar.GetSafeHwnd() != 0)
+      m_menuBar.UpdateFont(dpi);
+    return;
+  }
+
   // Resize the toolbar
   ImagePNG normalImage, disabledImage;
   if (m_toolBar.GetSafeHwnd() != 0)
