@@ -38,7 +38,7 @@ public:
   }
   float Filter(float val)
   {
-    val = fabs(val);
+    val = (float)fabs(val);
     return (val < m_width ? m_width - val : 0.0f);
   }
 };
@@ -53,7 +53,7 @@ public:
   {
     if (fabs(val) > m_width)
       return 0.0f;
-    return exp(-val * val / 2.0f) / sqrt(FILTER_2PI);
+    return (float)(exp(-val * val / 2.0f) / sqrt(FILTER_2PI));
   }
 };
 
@@ -67,8 +67,8 @@ public:
   {
     if (fabs(val) > m_width)
       return 0.0f;
-    float window = 0.54f + 0.46f * cos(FILTER_2PI * val);
-    float sinc = (val == 0.0f) ? 1.0f : sin(FILTER_PI * val) / (FILTER_PI * val);
+    float window = (float)(0.54f + 0.46f * cos(FILTER_2PI * val));
+    float sinc = (val == 0.0f) ? 1.0f : (float)(sin(FILTER_PI * val) / (FILTER_PI * val));
     return window * sinc;
   }
 };
@@ -84,7 +84,7 @@ public:
     if (fabs(val) > m_width)
       return 0.0f;
     float n = 2.0f * m_width + 1.0f;
-    return 0.42f + 0.5f * cos(FILTER_2PI * val / (n - 1.0f)) + 0.08f * cos(FILTER_4PI * val / (n - 1.0f));
+    return (float)(0.42f + 0.5f * cos(FILTER_2PI * val / (n - 1.0f)) + 0.08f * cos(FILTER_4PI * val / (n - 1.0f)));
   }
 };
 
