@@ -118,7 +118,7 @@ typedef struct _NONCLIENTMETRICSW_0600
 }
 NONCLIENTMETRICSW_0600;
 
-bool DPI::createSystemMenuFont(CFont* font, int dpi)
+bool DPI::createSystemMenuFont(CFont* font, int dpi, double scale)
 {
   typedef BOOL(__stdcall *PFNSYSPARAMINFOFORDPI)(UINT, UINT, PVOID, UINT, UINT);
 
@@ -131,6 +131,7 @@ bool DPI::createSystemMenuFont(CFont* font, int dpi)
     ncm.cbSize = sizeof ncm;
     if ((*sysParamInfoForDpi)(SPI_GETNONCLIENTMETRICS,ncm.cbSize,&ncm,0,dpi))
     {
+      ncm.lfMenuFont.lfHeight = (int)(scale*ncm.lfMenuFont.lfHeight);
       HFONT fontHandle = ::CreateFontIndirectW(&ncm.lfMenuFont);
       if (fontHandle)
       {
@@ -145,6 +146,7 @@ bool DPI::createSystemMenuFont(CFont* font, int dpi)
     ncm.cbSize = sizeof ncm;
     if (::SystemParametersInfo(SPI_GETNONCLIENTMETRICS,ncm.cbSize,&ncm,0))
     {
+      ncm.lfMenuFont.lfHeight = (int)(scale*ncm.lfMenuFont.lfHeight);
       if (font->CreateFontIndirect(&ncm.lfMenuFont))
         return true;
     }
