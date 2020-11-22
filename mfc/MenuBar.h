@@ -4,9 +4,6 @@
 
 #define WM_MENUBAR_POPUP (WM_APP+1000)
 
-typedef BOOL (WINAPI* GETMENUINFO)(HMENU,LPMENUINFO);
-typedef BOOL (WINAPI* SETMENUINFO)(HMENU,LPCMENUINFO);
-
 class MenuBar : public CToolBar
 {
 public:
@@ -30,8 +27,6 @@ public:
 
   BOOL TranslateFrameMessage(MSG* msg);
   void OnMenuSelect(HMENU menu, UINT flags);
-  void OnMeasureItem(LPMEASUREITEMSTRUCT mis);
-  void OnDrawItem(LPDRAWITEMSTRUCT mis);
 
 protected: 
   DECLARE_DYNAMIC(MenuBar)
@@ -61,13 +56,9 @@ protected:
   int GetNextButton(int button, bool goBack);
   void SetBitmaps(CMenu* menu);
   bool AllowAltX(WPARAM wp);
-  DWORD GetDllVersion(const char* dllName);
 
   static LRESULT CALLBACK InputFilter(int code, WPARAM wp, LPARAM lp);
 
-  DWORD m_os;
-  GETMENUINFO m_getMenuInfo;
-  SETMENUINFO m_setMenuInfo;
   bool m_useF10;
   FilterAltX m_filterAltX;
   CArray<int> m_noIconIds;
@@ -127,8 +118,6 @@ protected:
 
   afx_msg int OnCreate(LPCREATESTRUCT lpCreateStruct);
   afx_msg void OnMenuSelect(UINT, UINT, HMENU);
-  afx_msg void OnMeasureItem(int, LPMEASUREITEMSTRUCT);
-  afx_msg void OnDrawItem(int, LPDRAWITEMSTRUCT);
   afx_msg void OnSettingChange(UINT, LPCTSTR);
   DECLARE_MESSAGE_MAP()
 
@@ -140,7 +129,6 @@ protected:
   void LoadBitmap(CBitmap& bitmap, UINT id);
   void SetBarSizes(void);
 
-  BOOL UseNewBar(void);
   BOOL CreateNewBar(UINT id, UINT imageId);
   void LoadBitmaps(ImagePNG& normal, ImagePNG& disabled);
 

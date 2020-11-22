@@ -1,12 +1,11 @@
 #include "stdafx.h"
 #include "MenuBar.h"
 #include "DpiFunctions.h"
+#pragma warning(disable : 4996) // Ignore deprecation warning
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #endif
-
-#define OS_WINDOWS_XP MAKELONG(1,5)
 
 namespace {
 MenuBar* menuBar = NULL;
@@ -37,17 +36,6 @@ MenuBar::MenuBar()
 
   m_useF10 = true;
   m_filterAltX = NULL;
-
-  OSVERSIONINFO osVer = { sizeof(OSVERSIONINFO),0 };
-  ::GetVersionEx(&osVer);
-  m_os = MAKELONG(osVer.dwMinorVersion,osVer.dwMajorVersion);
-
-  if (GetDllVersion("comctl32.dll") < MAKELONG(0,6))
-    m_os = MAKELONG(0,4); // As if before Windows XP ...
-
-  HMODULE user32 = ::LoadLibrary("user32.dll");
-  m_getMenuInfo = (GETMENUINFO)::GetProcAddress(user32,"GetMenuInfo");
-  m_setMenuInfo = (SETMENUINFO)::GetProcAddress(user32,"SetMenuInfo");
 }
 
 MenuBar::~MenuBar()
@@ -72,11 +60,6 @@ void MenuBar::AddNoIconId(UINT id)
 
 BOOL MenuBar::Create(UINT id, CMenu* menu, CWnd* parent)
 {
-  // We need at least Windows XP. If not return true to indicate that the
-  // program can carry on: it will simply get the original Windows menu instead.
-  if (m_os < OS_WINDOWS_XP)
-    return TRUE;
-
   // Create the menu toolbar
   if (CreateEx(parent,TBSTYLE_FLAT|TBSTYLE_LIST|TBSTYLE_TRANSPARENT,
     WS_CHILD|WS_VISIBLE|CBRS_ALIGN_TOP|CBRS_TOOLTIPS|CBRS_FLYBY) == FALSE)
@@ -85,20 +68,6 @@ BOOL MenuBar::Create(UINT id, CMenu* menu, CWnd* parent)
   }
   GetToolBarCtrl().SetBitmapSize(CSize(0,0));
   UpdateFont(DPI::getWindowDPI(parent));
-
-  // For Windows XP and earlier, disable theming so that the menu text colour can be set
-  if (m_os <= OS_WINDOWS_XP)
-  {
-    HMODULE themes = ::LoadLibrary("uxtheme.dll");
-    if (themes != 0)
-    {
-      typedef HRESULT (STDAPICALLTYPE* SETWINDOWTHEME)(HWND,LPCWSTR,LPCWSTR);
-      SETWINDOWTHEME setWindowTheme = (SETWINDOWTHEME)::GetProcAddress(themes,"SetWindowTheme");
-      if (setWindowTheme != NULL)
-        (*setWindowTheme)(GetSafeHwnd(),L"",L"");
-      ::FreeLibrary(themes);
-    }
-  }
 
   // Load the menus
   if (id == -1)
@@ -114,9 +83,6 @@ BOOL MenuBar::Create(UINT id, CMenu* menu, CWnd* parent)
 
 void MenuBar::LoadBitmaps(CBitmap& bitmap, CToolBarCtrl& bar, CSize size, bool alpha)
 {
-  if (!(m_getMenuInfo && m_setMenuInfo))
-    return;
-
   // Create device contexts compatible with the display
   CDC dcFrom, dcTo;
   dcFrom.CreateCompatibleDC(NULL);
@@ -257,17 +223,37 @@ void MenuBar::UpdateFont(int dpi)
     SetFont(&m_font);
 
   int barHeight = DPI::getSystemMetrics(SM_CYMENU,dpi);
+
+  if (::IsAppThemed())
+  {
+    HTHEME theme = ::OpenThemeData(GetSafeHwnd(),L"Menu");
+    if (theme)
+    {
+      CDC* dc = GetDC();
+      CFont* oldFont = dc->SelectObject(GetFont());
+
+      MARGINS margins = { 0 };
+      if (SUCCEEDED(::GetThemeMargins(theme,dc->GetSafeHdc(),
+        MENU_BARITEM,MBI_NORMAL,TMT_CONTENTMARGINS,NULL,&margins)))
+      {
+        TEXTMETRIC metrics;
+        dc->GetTextMetrics(&metrics);
+        if (barHeight < metrics.tmHeight + margins.cyTopHeight + margins.cyBottomHeight)
+          barHeight = metrics.tmHeight + margins.cyTopHeight + margins.cyBottomHeight;
+      }
+
+      dc->SelectObject(oldFont);
+      ReleaseDC(dc);
+      ::CloseThemeData(theme);
+    }
+  }
+
   GetToolBarCtrl().SetButtonSize(CSize(0,barHeight));
 }
 
 CMenu* MenuBar::GetMenu(void) const
 {
   return const_cast<CMenu*>(&m_menu);
-}
-
-DWORD MenuBar::GetOS(void) const
-{
-  return m_os;
 }
 
 BOOL MenuBar::TranslateFrameMessage(MSG* msg)
@@ -386,18 +372,39 @@ void MenuBar::OnCustomDraw(NMHDR* nmhdr, LRESULT* result)
     *result = CDRF_NOTIFYITEMDRAW;
     break;
   case CDDS_ITEMPREPAINT:
+    if (::IsAppThemed())
     {
-      BOOL flat;
-      if (::SystemParametersInfo(SPI_GETFLATMENU,0,&flat,0) == 0)
-        flat = FALSE;
-
-      if (flat)
+      HTHEME theme = ::OpenThemeData(GetSafeHwnd(),L"Menu");
+      if (theme)
       {
-        *result = TBCDRF_NOEDGES|TBCDRF_NOOFFSET|TBCDRF_HILITEHOTTRACK;
-        nmtbcd->clrHighlightHotTrack = ::GetSysColor(COLOR_MENUHILIGHT);
+        int state = MBI_NORMAL;
         if ((nmtbcd->nmcd.uItemState & CDIS_HOT) != 0)
-          nmtbcd->clrText = ::GetSysColor(COLOR_HIGHLIGHTTEXT);
+          state = m_popupMenu ? MBI_PUSHED : MBI_HOT;
+
+        CDC* dc = CDC::FromHandle(nmtbcd->nmcd.hdc);
+        CRect r(nmtbcd->nmcd.rc);
+        ::DrawThemeBackground(theme,dc->GetSafeHdc(),MENU_BARITEM,state,r,NULL);
+
+        CStringW text(GetButtonText((int)nmtbcd->nmcd.dwItemSpec));
+        CFont* oldFont = dc->SelectObject(GetFont());
+        DWORD txtFlags = DT_CENTER|DT_VCENTER|DT_SINGLELINE;
+        if (SendMessage(WM_QUERYUISTATE) & UISF_HIDEACCEL)
+          txtFlags |= DT_HIDEPREFIX;
+        ::DrawThemeText(theme,dc->GetSafeHdc(),MENU_BARITEM,state,
+          text,text.GetLength(),txtFlags,0,r);
+        dc->SelectObject(oldFont);
+        ::CloseThemeData(theme);
+
+        *result = CDRF_SKIPDEFAULT;
       }
+    }
+
+    if (*result == CDRF_DODEFAULT)
+    {
+      *result = TBCDRF_NOEDGES|TBCDRF_NOOFFSET|TBCDRF_HILITEHOTTRACK;
+      nmtbcd->clrHighlightHotTrack = ::GetSysColor(COLOR_MENUHILIGHT);
+      if ((nmtbcd->nmcd.uItemState & CDIS_HOT) != 0)
+        nmtbcd->clrText = ::GetSysColor(COLOR_HIGHLIGHTTEXT);
     }
     break;
   }
@@ -511,77 +518,6 @@ void MenuBar::OnMenuSelect(HMENU menu, UINT flags)
   }
 }
 
-void MenuBar::OnMeasureItem(LPMEASUREITEMSTRUCT mis)
-{
-  if (mis->CtlType == ODT_MENU)
-  {
-    Bitmap bitmap;
-    if (m_bitmaps.Lookup(mis->itemID,bitmap))
-    {
-      mis->itemWidth = bitmap.size.cx;
-      mis->itemHeight = bitmap.size.cy;
-    }
-    else
-    {
-      mis->itemWidth = 0;
-      mis->itemHeight = 0;
-    }
-  }
-}
-
-void MenuBar::OnDrawItem(LPDRAWITEMSTRUCT dis)
-{
-  if ((dis->CtlType == ODT_MENU) && ((dis->itemState & ODS_GRAYED) == 0))
-  {
-    Bitmap bitmap;
-    if (m_bitmaps.Lookup(dis->itemID,bitmap))
-    {
-      CDC dcFrom;
-      dcFrom.CreateCompatibleDC(NULL);
-      CDC* dc = CDC::FromHandle(dis->hDC);
-
-      // Copy in the initial bitmap values and adjust for the background colour
-      ::GdiFlush();
-      memcpy(bitmap.bits,bitmap.initialBits,bitmap.size.cx*bitmap.size.cy*sizeof(DWORD));
-      COLORREF back = dc->GetBkColor();
-      for (int y = 0; y < bitmap.size.cy; y++)
-      {
-        for (int x = 0; x < bitmap.size.cx; x++)
-        {
-          DWORD pixel = bitmap.bits[x+(y*bitmap.size.cx)];
-          int b = pixel & 0xff; pixel >>= 8;
-          int g = pixel & 0xff; pixel >>= 8;
-          int r = pixel & 0xff; pixel >>= 8;
-          int a = pixel & 0xff;
-
-          if (a == 0)
-          {
-            r = GetRValue(back); g = GetGValue(back); b = GetBValue(back);
-            bitmap.bits[x+(y*bitmap.size.cx)] = (0xff<<24)|(r<<16)|(g<<8)|b;
-          }
-          else if (a == 255)
-          {
-            // Do nothing
-          }
-          else
-          {
-            a = 255-a;
-            r += (a * (GetRValue(back)) >> 8);
-            g += (a * (GetGValue(back)) >> 8);
-            b += (a * (GetBValue(back)) >> 8);
-            bitmap.bits[x+(y*bitmap.size.cx)] = (0xff<<24)|(r<<16)|(g<<8)|b;
-          }
-        }
-      }
-
-      CBitmap* old = dcFrom.SelectObject(CBitmap::FromHandle(bitmap.bitmap));
-      CRect r(dis->rcItem);
-      dc->BitBlt(r.left,r.top,r.Width(),r.Height(),&dcFrom,0,0,SRCCOPY);
-      dcFrom.SelectObject(old);
-    }
-  }
-}
-
 void MenuBar::TrackPopupMenu(int button, bool keyboard)
 {
   while (button >= 0)
@@ -599,6 +535,7 @@ void MenuBar::TrackPopupMenu(int button, bool keyboard)
     }
 
     SetTrackingState(TRACK_POPUP,button);
+    Invalidate();
 
     // Trap menu input for keys and "hot tracking"
     menuBar = this;
@@ -695,9 +632,6 @@ int MenuBar::GetNextButton(int button, bool goBack)
 
 void MenuBar::SetBitmaps(CMenu* menu)
 {
-  if (!(m_getMenuInfo && m_setMenuInfo))
-    return;
-
   bool hasBitmap = false;
   for (UINT i = 0; i < (UINT)menu->GetMenuItemCount(); i++)
   {
@@ -716,13 +650,7 @@ void MenuBar::SetBitmaps(CMenu* menu)
         {
           MENUITEMINFO mii = { sizeof MENUITEMINFO,0 };
           mii.fMask = MIIM_BITMAP;
-
-          // Alpha bitmaps for menu items are only supported from Vista onwards:
-          // for earlier Windows we will have to draw the bitmap ourselves.
-          if (m_os <= OS_WINDOWS_XP)
-            mii.hbmpItem = HBMMENU_CALLBACK;
-          else
-            mii.hbmpItem = bitmap.bitmap;
+          mii.hbmpItem = bitmap.bitmap;
           menu->SetMenuItemInfo(i,&mii,TRUE);
           hasBitmap = true;
         }
@@ -735,9 +663,9 @@ void MenuBar::SetBitmaps(CMenu* menu)
   {
     MENUINFO mi= { sizeof(MENUINFO),0 };
     mi.fMask = MIM_STYLE;
-    (*m_getMenuInfo)(menu->GetSafeHmenu(),&mi);
+    ::GetMenuInfo(menu->GetSafeHmenu(),&mi);
     mi.dwStyle |= MNS_CHECKORBMP;
-    (*m_setMenuInfo)(menu->GetSafeHmenu(),&mi);
+    ::SetMenuInfo(menu->GetSafeHmenu(),&mi);
   }
 }
 
@@ -746,28 +674,6 @@ bool MenuBar::AllowAltX(WPARAM wp)
   if (m_filterAltX != NULL)
     return (*m_filterAltX)((char)wp);
   return true;
-}
-
-DWORD MenuBar::GetDllVersion(const char* dllName)
-{
-  DWORD version = 0;
-
-  HINSTANCE dll = ::LoadLibrary(dllName);
-  if (dll != 0)
-  {
-    DLLGETVERSIONPROC dllGetVersion = (DLLGETVERSIONPROC)::GetProcAddress(dll,"DllGetVersion");
-    if (dllGetVersion != NULL)
-    {
-      DLLVERSIONINFO dvi;
-      ::ZeroMemory(&dvi,sizeof dvi);
-      dvi.cbSize = sizeof dvi;
-
-      if (SUCCEEDED((*dllGetVersion)(&dvi)))
-        version = MAKELONG(dvi.dwMinorVersion,dvi.dwMajorVersion);
-    }
-    ::FreeLibrary(dll);
-  }
-  return version;
 }
 
 LRESULT CALLBACK MenuBar::InputFilter(int code, WPARAM wp, LPARAM lp)
@@ -1009,13 +915,6 @@ void MenuBarFrameWnd::UpdateDPI(int dpi)
 {
   m_settings = Settings(dpi);
 
-  if (m_menuBar.GetOS() < OS_WINDOWS_XP)
-  {
-    if (m_menuBar.GetSafeHwnd() != 0)
-      m_menuBar.UpdateFont(dpi);
-    return;
-  }
-
   // Resize the toolbar
   ImagePNG normalImage, disabledImage;
   if (m_toolBar.GetSafeHwnd() != 0)
@@ -1069,20 +968,6 @@ void MenuBarFrameWnd::OnMenuSelect(UINT id, UINT flags, HMENU menu)
   CFrameWnd::OnMenuSelect(id,flags,menu);
 }
 
-void MenuBarFrameWnd::OnMeasureItem(int id, LPMEASUREITEMSTRUCT mis)
-{
-  if (m_menuBar.GetSafeHwnd() != 0)
-    m_menuBar.OnMeasureItem(mis);
-  CFrameWnd::OnMeasureItem(id,mis);
-}
-
-void MenuBarFrameWnd::OnDrawItem(int id, LPDRAWITEMSTRUCT dis)
-{
-  if (m_menuBar.GetSafeHwnd() != 0)
-    m_menuBar.OnDrawItem(dis);
-  CFrameWnd::OnDrawItem(id,dis);
-}
-
 void MenuBarFrameWnd::OnSettingChange(UINT uiAction, LPCTSTR lpszSection)
 {
   CFrameWnd::OnSettingChange(uiAction,lpszSection);
@@ -1130,9 +1015,6 @@ BOOL MenuBarFrameWnd::CreateMenuBar(UINT id, CMenu* menu)
 
 BOOL MenuBarFrameWnd::CreateBar(UINT id, UINT id32)
 {
-  // Only use 32-bit bitmaps if at least Windows XP with 32-bit colour
-  if (m_menuBar.GetOS() < OS_WINDOWS_XP)
-    id32 = (UINT)-1;
   CDC* dc = GetDC();
   int depth = dc->GetDeviceCaps(BITSPIXEL);
   ReleaseDC(dc);
@@ -1184,17 +1066,8 @@ BOOL MenuBarFrameWnd::CreateBar(UINT id, UINT id32)
   return TRUE;
 }
 
-BOOL MenuBarFrameWnd::UseNewBar(void)
-{
-  return (m_menuBar.GetOS() >= OS_WINDOWS_XP);
-}
-
 BOOL MenuBarFrameWnd::CreateNewBar(UINT id, UINT imageId)
 {
-  // On old versions of Windows, use the old menu and toolbars
-  if (!UseNewBar())
-    return CreateBar(id,(UINT)-1);
-
   // Create the toolbar and load the resource for it
   if (!m_toolBar.CreateEx(this,TBSTYLE_FLAT|TBSTYLE_TRANSPARENT,
     WS_CHILD|WS_VISIBLE|CBRS_ALIGN_TOP|CBRS_TOOLTIPS|CBRS_FLYBY))
