@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "Dialogs.h"
+#pragma warning(disable : 4996) // Ignore deprecation warning
 
 IMPLEMENT_DYNAMIC(BaseDialog, CDialog)
 
