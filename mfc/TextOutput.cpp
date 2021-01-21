@@ -107,22 +107,22 @@ void TextOutput::TextOut(HDC dc, int x, int y, LPCWSTR str, UINT count)
         ::SelectObject(dc,linkFont);
 
         // Adjust for the font baseline
-        int y = 0;
+        int baseY = 0;
         if ((align & (TA_TOP|TA_BASELINE|TA_BOTTOM)) == TA_TOP)
         {
           TEXTMETRIC linkMetrics;
           ::GetTextMetrics(dc,&linkMetrics);
-          y = linkMetrics.tmAscent - metrics.tmAscent;
+          baseY = linkMetrics.tmAscent - metrics.tmAscent;
         }
-        if (y != 0)
-          ShiftYPos(dc,-y);
+        if (baseY != 0)
+          ShiftYPos(dc,-baseY);
 
         // Output the text in the linked font
         ::TextOutW(dc,0,0,str,theCount);
 
         // Put back the font baseline adjustment
-        if (y != 0)
-          ShiftYPos(dc,y);
+        if (baseY != 0)
+          ShiftYPos(dc,baseY);
 
         ::SelectObject(dc,font);
         if (linkRelease)
@@ -227,22 +227,22 @@ void TextOutput::TextOut(HDC dc, int x, int y, LPCWSTR str, UINT count, const RE
         ::SelectObject(dc,linkFont);
 
         // Adjust for the font baseline
-        int y = 0;
+        int baseY = 0;
         if ((align & (TA_TOP|TA_BASELINE|TA_BOTTOM)) == TA_TOP)
         {
           TEXTMETRIC linkMetrics;
           ::GetTextMetrics(dc,&linkMetrics);
-          y = linkMetrics.tmAscent - metrics.tmAscent;
+          baseY = linkMetrics.tmAscent - metrics.tmAscent;
         }
-        if (y != 0)
-          ShiftYPos(dc,-y);
+        if (baseY != 0)
+          ShiftYPos(dc,-baseY);
 
         // Output the text in the linked font
         ::ExtTextOutW(dc,0,0,0,&rect,str,theCount,NULL);
 
         // Put back the font baseline adjustment
-        if (y != 0)
-          ShiftYPos(dc,y);
+        if (baseY != 0)
+          ShiftYPos(dc,baseY);
 
         ::SelectObject(dc,font);
         if (linkRelease)

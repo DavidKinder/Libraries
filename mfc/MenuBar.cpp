@@ -102,9 +102,9 @@ void MenuBar::LoadBitmaps(CBitmap& bitmap, CToolBarCtrl& bar, CSize size, bool a
     {
       // Skip excluded menu items
       bool skip = false;
-      for (int i = 0; i < m_noIconIds.GetSize(); i++)
+      for (int iconId = 0; iconId < m_noIconIds.GetSize(); iconId++)
       {
-        if (button.idCommand == m_noIconIds[i])
+        if (button.idCommand == m_noIconIds[iconId])
           skip = true;
       }
       if (skip)
@@ -135,27 +135,27 @@ void MenuBar::LoadBitmaps(CBitmap& bitmap, CToolBarCtrl& bar, CSize size, bool a
       {
         for (int x = 0; x < size.cx; x++)
         {
-          int i = x+(y*size.cx);
+          int idx = x+(y*size.cx);
           if (alpha)
           {
-            DWORD alpha = (bits[i]&0xff000000)>>24;
-            if (alpha == 0)
-              bits[i] = 0;
-            else if (alpha != 0xff)
+            DWORD a = (bits[idx]&0xff000000)>>24;
+            if (a == 0)
+              bits[idx] = 0;
+            else if (a != 0xff)
             {
-              DWORD r = (bits[i]&0x00ff0000)>>16;
-              DWORD g = (bits[i]&0x0000ff00)>>8;
-              DWORD b = bits[i]&0x000000ff;
-              r = (r*alpha)>>8; g = (g*alpha)>>8; b = (b*alpha)>>8;
-              bits[i] = (alpha<<24)|(r<<16)|(g<<8)|b;
+              DWORD r = (bits[idx]&0x00ff0000)>>16;
+              DWORD g = (bits[idx]&0x0000ff00)>>8;
+              DWORD b = bits[idx]&0x000000ff;
+              r = (r*a)>>8; g = (g*a)>>8; b = (b*a)>>8;
+              bits[idx] = (a<<24)|(r<<16)|(g<<8)|b;
             }
           }
           else
           {
-            if (bits[i] == clear)
-              bits[i] = 0;
+            if (bits[idx] == clear)
+              bits[idx] = 0;
             else
-              bits[i] = (0xff<<24)|(bits[i]&0x00ffffff);
+              bits[idx] = (0xff<<24)|(bits[idx]&0x00ffffff);
           }
         }
       }
