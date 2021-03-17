@@ -18,12 +18,6 @@
 
 TextOutput::TextOutput()
 {
-  // Open the GDI32 DLL and get function pointers from it
-  m_gdi = ::LoadLibrary("gdi32.dll");
-  ASSERT(m_gdi != 0);
-  m_getGlyphIndicesW = (GetGlyphIndicesWPtr)::GetProcAddress(m_gdi,"GetGlyphIndicesW");
-  m_getCharABCWidthsFloatW = (GetCharABCWidthsFloatWPtr)::GetProcAddress(m_gdi,"GetCharABCWidthsFloatW");
-
   // Create the MLang COM object
   if (FAILED(m_fl.CoCreateInstance(CLSID_CMultiLanguage)))
     TRACE("Failed to create MLang object\n");
@@ -32,7 +26,6 @@ TextOutput::TextOutput()
 TextOutput::~TextOutput()
 {
   Reset();
-  ::FreeLibrary(m_gdi);
 }
 
 void TextOutput::TextOut(HDC dc, int x, int y, LPCWSTR str, UINT count)
@@ -354,10 +347,6 @@ leave:
 
 bool TextOutput::GetCharABCWidth(HDC dc, WCHAR c, ABCFLOAT& abc)
 {
-  // If GetCharABCWidthsFloatW() is not present, just fail
-  if (m_getCharABCWidthsFloatW == NULL)
-    return false;
-
   // If no font linking, just check the current font
   if (m_fl == NULL)
     goto leave;
@@ -379,7 +368,7 @@ bool TextOutput::GetCharABCWidth(HDC dc, WCHAR c, ABCFLOAT& abc)
   if (theCodePages & fontCodePages)
   {
     // Character is available in the current font
-    return ((*m_getCharABCWidthsFloatW)(dc,c,c,&abc) != 0);
+    return (::GetCharABCWidthsFloatW(dc,c,c,&abc) != 0);
   }
   else
   {
@@ -400,18 +389,18 @@ bool TextOutput::GetCharABCWidth(HDC dc, WCHAR c, ABCFLOAT& abc)
     {
       // Got a suitable font, so use it
       ::SelectObject(dc,linkFont);
-      bool gotABC = ((*m_getCharABCWidthsFloatW)(dc,c,c,&abc) != 0);
+      bool gotABC = (::GetCharABCWidthsFloatW(dc,c,c,&abc) != 0);
       ::SelectObject(dc,font);
       if (linkRelease)
         m_fl->ReleaseFont(linkFont);
       return gotABC;
     }
     else
-      return ((*m_getCharABCWidthsFloatW)(dc,c,c,&abc) != 0);
+      return (::GetCharABCWidthsFloatW(dc,c,c,&abc) != 0);
   }
 
 leave:
-  return ((*m_getCharABCWidthsFloatW)(dc,c,c,&abc) != 0);
+  return (::GetCharABCWidthsFloatW(dc,c,c,&abc) != 0);
 }
 
 bool TextOutput::CanOutput(HDC dc, UINT32 c)
@@ -475,12 +464,10 @@ bool TextOutput::CanOutput(HDC dc, UINT32 c)
   }
 
 leave:
-  // Try calling the GetGlyphIndicesW() function, if it exists. If calling it fails,
-  // just assume that the character can be output and hope for the best.
-  if (m_getGlyphIndicesW == NULL)
-    return true;
+  // Call the GetGlyphIndicesW() function. If it fails, just assume that
+  // the character can be output and hope for the best.
   WORD indices[1] = { 0xFFFF };
-  if ((*m_getGlyphIndicesW)(dc,&wc,1,indices,GGI_MARK_NONEXISTING_GLYPHS) == GDI_ERROR)
+  if (::GetGlyphIndicesW(dc,&wc,1,indices,GGI_MARK_NONEXISTING_GLYPHS) == GDI_ERROR)
     return true;
 
   // Return if a glyph has been found
