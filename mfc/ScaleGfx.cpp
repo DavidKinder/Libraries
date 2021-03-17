@@ -1,7 +1,7 @@
 // Taken from an article by Eran Yariv at http://www.codeproject.com/
 
-#ifndef TWO_PASS_SCALE_H_
-#define TWO_PASS_SCALE_H_
+#include "StdAfx.h"
+#include "ScaleGfx.h"
 
 #include <math.h>
 
@@ -340,4 +340,10 @@ void TwoPassScale<FilterClass>::Scale(COLORREF* origImage, UINT origWidth, UINT 
   delete[] temp;
 }
 
-#endif // TWO_PASS_SCALE_H_
+void ScaleGfx(
+  COLORREF* srcImage, UINT srcWidth, UINT srcHeight,
+  COLORREF* destImage, UINT destWidth, UINT destHeight)
+{
+  TwoPassScale<BilinearFilter> scaler;
+  scaler.Scale(srcImage,srcWidth,srcHeight,destImage,destWidth,destHeight);
+}

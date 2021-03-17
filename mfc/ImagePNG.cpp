@@ -341,16 +341,9 @@ bool ImagePNG::LoadFile(const char* name)
   return true;
 }
 
-#if defined(_WIN64) && !defined(INCLUDE_2PASS_SCALE)
-#define INCLUDE_2PASS_SCALE
-#endif
+#endif // NO_LIBPNG
 
-#ifdef INCLUDE_2PASS_SCALE
-#include <memory>
-#include "2PassScale.h"
-#else
-extern "C" __declspec(dllimport) void ScaleGfx(COLORREF*, UINT, UINT, COLORREF*, UINT, UINT);
-#endif
+#include "ScaleGfx.h"
 
 void ImagePNG::Scale(const ImagePNG& image, const CSize& size)
 {
@@ -360,16 +353,7 @@ void ImagePNG::Scale(const ImagePNG& image, const CSize& size)
   m_pixels = new BYTE[size.cx*size.cy*sizeof(DWORD)];
   m_size = size;
 
-#ifdef INCLUDE_2PASS_SCALE
-  TwoPassScale<BilinearFilter> scaler;
-  scaler.Scale(
-    (COLORREF*)image.m_pixels,image.m_size.cx,image.m_size.cy,
-    (COLORREF*)m_pixels,size.cx,size.cy);
-#else
   ScaleGfx(
     (COLORREF*)image.m_pixels,image.m_size.cx,image.m_size.cy,
     (COLORREF*)m_pixels,size.cx,size.cy);
-#endif
 }
-
-#endif // NO_LIBPNG
