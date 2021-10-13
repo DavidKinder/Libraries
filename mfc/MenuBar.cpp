@@ -451,12 +451,29 @@ void MenuBar::OnUpdateCmdUI(CFrameWnd* target, BOOL disableIfNoHndler)
 {
   if (m_tracking == TRACK_NONE)
   {
-    BOOL always;
+    BOOL always = FALSE;
     if (::SystemParametersInfo(SPI_GETKEYBOARDCUES,0,&always,0) == 0)
       always = TRUE;
 
-    bool alt = ((::GetKeyState(VK_LMENU) & 0x8000) != 0);
-    bool f10 = ((::GetKeyState(VK_F10) & 0x8000) != 0) && m_useF10;
+    // Get the active frame window
+    CFrameWnd* activeFrame = NULL;
+    CWnd* active = CWnd::GetActiveWindow();
+    if (active != NULL)
+    {
+      if (active->IsKindOf(RUNTIME_CLASS(CFrameWnd)))
+        activeFrame = (CFrameWnd*)active;
+      else
+        activeFrame = active->GetParentFrame();
+    }
+
+    // Only respond to keys for the active frame window
+    bool alt = false;
+    bool f10 = false;
+    if (activeFrame == GetParentFrame())
+    {
+      alt = ((::GetKeyState(VK_LMENU) & 0x8000) != 0);
+      f10 = ((::GetKeyState(VK_F10) & 0x8000) != 0) && m_useF10;
+    }
 
     // Show or hide the menu keyboard shortcuts
     SendMessage(WM_UPDATEUISTATE,
