@@ -155,7 +155,7 @@ bool DPI::createSystemMenuFont(CFont* font, int dpi, double scale)
   return false;
 }
 
-void DPI::disableDialogDPI(CDialog* dlg)
+void DPI::disableDialogDPI(CWnd* dlg)
 {
   typedef BOOL(__stdcall *PFNSETDIALOGDPICHANGEBEHAVIOR)(HWND, int, int);
 
