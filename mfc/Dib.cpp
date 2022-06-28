@@ -359,6 +359,40 @@ void CDibSection::FillSolid(COLORREF back)
   }
 }
 
+void CDibSection::BlendSolidRect(LPRECT rect, COLORREF colour, int alpha)
+{
+  int cr = GetRValue(colour);
+  int cg = GetGValue(colour);
+  int cb = GetBValue(colour);
+
+  CSize size = GetSize();
+  int r, g, b;
+
+  for (int y = rect->top; y < rect->bottom; y++)
+  {
+    if ((y >= 0) && (y < size.cy))
+    {
+      for (int x = rect->left; x < rect->right; x++)
+      {
+        if ((x >= 0) && (x < size.cx))
+        {
+          DWORD pixel = GetPixel(x,y);
+          b = pixel & 0xFF;
+          pixel >>= 8;
+          g = pixel & 0xFF;
+          pixel >>= 8;
+          r = pixel & 0xFF;
+
+          r += (alpha * (cr - r) >> 8);
+          g += (alpha * (cg - g) >> 8);
+          b += (alpha * (cb - b) >> 8);
+          SetPixel(x,y,(0xFF<<24)|(r<<16)|(g<<8)|b);
+        }
+      }
+    }
+  }
+}
+
 void CDibSection::Darken(double dark)
 {
   int sr, sg, sb, a;

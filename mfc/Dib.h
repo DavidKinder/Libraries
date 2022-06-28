@@ -61,6 +61,7 @@ public:
     LONG x, LONG y, BOOL invert);
 
   void FillSolid(COLORREF back);
+  void BlendSolidRect(LPRECT rect, COLORREF colour, int alpha);
   void Darken(double dark);
 
   // Get and set the colour at (x,y). For speed reasons these
