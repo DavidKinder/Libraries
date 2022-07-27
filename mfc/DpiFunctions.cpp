@@ -35,6 +35,18 @@ namespace {
     return 0;
   }
 
+  VOID* getMonitorFromPoint(CPoint* pt)
+  {
+    typedef VOID*(__stdcall *PFNMONITORFROMPOINT)(POINT, DWORD);
+
+    HMODULE user = getUser32();
+    PFNMONITORFROMPOINT monitorFromPoint = (PFNMONITORFROMPOINT)
+      ::GetProcAddress(user,"MonitorFromPoint");
+    if (monitorFromPoint != NULL)
+      return (*monitorFromPoint)(*pt, MONITOR_DEFAULTTOPRIMARY);
+    return 0;
+  }
+
   BOOL getMonitorInfo(VOID* monitor, MONITORINFO* monInfo)
   {
     typedef BOOL(__stdcall *PFNGETMONITORINFO)(VOID*, MONITORINFO*);
@@ -166,9 +178,37 @@ void DPI::disableDialogDPI(CWnd* dlg)
     (*setDialogDpiChangeBehavior)(dlg->GetSafeHwnd(),1,1); // Set DDC_DISABLE_ALL
 }
 
+int DPI::getSystemFontSize(void)
+{
+  // Get the primary monitor
+  CPoint zero(0,0);
+  CRect primary = DPI::getMonitorRect(&zero);
+
+  // Guess a suitable font size, given the monitor height and DPI
+  double scale = (double)primary.Height() / (double)DPI::getSystemDPI();
+  if (scale < 9.0)
+    return 9;
+  else if (scale > 11.0)
+    return 11;
+  return 10;
+}
+
 CRect DPI::getMonitorRect(CWnd* wnd)
 {
   VOID* monitor = getMonitorFromWindow(wnd);
+  if (monitor != 0)
+  {
+    MONITORINFO monInfo = { 0 };
+    monInfo.cbSize = sizeof monInfo;
+    if (getMonitorInfo(monitor,&monInfo))
+      return monInfo.rcMonitor;
+  }
+  return CRect(0,0,::GetSystemMetrics(SM_CXSCREEN),::GetSystemMetrics(SM_CYSCREEN));
+}
+
+CRect DPI::getMonitorRect(CPoint* pt)
+{
+  VOID* monitor = getMonitorFromPoint(pt);
   if (monitor != 0)
   {
     MONITORINFO monInfo = { 0 };
