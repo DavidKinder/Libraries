@@ -13,6 +13,7 @@ END_MESSAGE_MAP()
 ColourButton::ColourButton()
 {
   m_colour = RGB(0,0,0);
+  m_showDisabled = true;
   m_notifyMsgId = 0;
 }
 
@@ -80,7 +81,8 @@ void ColourButton::OnCustomDraw(NMHDR* nmhdr, LRESULT* result)
           r.OffsetRect(1,1);
       }
 
-      DrawControl(dc,r,disabled,focus);
+      if (!disabled || m_showDisabled)
+        DrawControl(dc,r,disabled,focus);
       *result = CDRF_SKIPDEFAULT;
     }
     break;
