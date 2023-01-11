@@ -402,9 +402,19 @@ void MenuBar::OnCustomDraw(NMHDR* nmhdr, LRESULT* result)
     if (*result == CDRF_DODEFAULT)
     {
       *result = TBCDRF_NOEDGES|TBCDRF_NOOFFSET|TBCDRF_HILITEHOTTRACK;
-      nmtbcd->clrHighlightHotTrack = ::GetSysColor(COLOR_MENUHILIGHT);
-      if ((nmtbcd->nmcd.uItemState & CDIS_HOT) != 0)
-        nmtbcd->clrText = ::GetSysColor(COLOR_HIGHLIGHTTEXT);
+
+      DarkMode* dark = DarkMode::GetActive(this);
+      if (dark)
+      {
+        nmtbcd->clrHighlightHotTrack = dark->GetColour(DarkMode::Dark2);
+        nmtbcd->clrText = dark->GetColour(DarkMode::Fore);
+      }
+      else
+      {
+        nmtbcd->clrHighlightHotTrack = ::GetSysColor(COLOR_MENUHILIGHT);
+        if ((nmtbcd->nmcd.uItemState & CDIS_HOT) != 0)
+          nmtbcd->clrText = ::GetSysColor(COLOR_HIGHLIGHTTEXT);
+      }
     }
     break;
   }
@@ -920,12 +930,23 @@ BEGIN_MESSAGE_MAP(MenuBarFrameWnd, CFrameWnd)
   ON_WM_MEASUREITEM()
   ON_WM_DRAWITEM()
   ON_WM_SETTINGCHANGE()
+  ON_MESSAGE(WM_DARKMODE_ACTIVE, OnDarkModeActive)
 END_MESSAGE_MAP()
 
 MenuBarFrameWnd::MenuBarFrameWnd()
 {
   m_menuBarIndex = -1;
   m_toolBarIndex = -1;
+  m_dark = NULL;
+}
+
+MenuBarFrameWnd::~MenuBarFrameWnd()
+{
+  if (m_dark)
+  {
+    delete m_dark;
+    m_dark = NULL;
+  }
 }
 
 void MenuBarFrameWnd::UpdateDPI(int dpi)
@@ -968,6 +989,20 @@ void MenuBarFrameWnd::UpdateDPI(int dpi)
   SetBarSizes();
 }
 
+void MenuBarFrameWnd::SetDarkMode(DarkMode* dark)
+{
+  if (m_dark)
+    delete m_dark;
+  m_dark = dark;
+
+  DarkMode::Set(this,dark);
+  DarkMode::Set(&m_coolBar,dark);
+  if (m_menuBar.GetSafeHwnd() != 0)
+    DarkMode::Set(&m_menuBar,&m_coolBar,m_menuBarIndex,dark);
+  if (m_toolBar.GetSafeHwnd() != 0)
+    DarkMode::Set(&m_toolBar,&m_coolBar,m_toolBarIndex,dark);
+}
+
 int MenuBarFrameWnd::OnCreate(LPCREATESTRUCT lpCreateStruct)
 {
   m_settings = Settings(DPI::getWindowDPI(this));
@@ -992,6 +1027,11 @@ void MenuBarFrameWnd::OnSettingChange(UINT uiAction, LPCTSTR lpszSection)
   int dpi = DPI::getWindowDPI(this);
   if (m_settings != Settings(dpi))
     UpdateDPI(dpi);
+}
+
+LRESULT MenuBarFrameWnd::OnDarkModeActive(WPARAM, LPARAM)
+{
+  return (LRESULT)m_dark;
 }
 
 BOOL MenuBarFrameWnd::PreTranslateMessage(MSG* msg)

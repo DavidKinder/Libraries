@@ -60,6 +60,11 @@ public:
   void AlphaBlend(const CDibSection* from, LONG fx, LONG fy, LONG fw, LONG fh,
     LONG x, LONG y, BOOL invert);
 
+  void AlphaBlendDark(COLORREF back);
+  void AlphaBlendDark(const CDibSection* from, LONG x, LONG y, BOOL invert = FALSE);
+  void AlphaBlendDark(const CDibSection* from, LONG fx, LONG fy, LONG fw, LONG fh,
+    LONG x, LONG y, BOOL invert);
+
   void FillSolid(COLORREF back);
   void BlendSolidRect(LPRECT rect, COLORREF colour, int alpha);
   void Darken(double dark);

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "DarkMode.h"
 #include "ImagePNG.h"
 
 #define WM_MENUBAR_POPUP (WM_APP+1000)
@@ -111,7 +112,10 @@ class MenuBarFrameWnd : public CFrameWnd
 {
 public:
   MenuBarFrameWnd();
+  virtual ~MenuBarFrameWnd();
+
   void UpdateDPI(int dpi);
+  virtual void SetDarkMode(DarkMode* dark);
 
 protected: 
   DECLARE_DYNAMIC(MenuBarFrameWnd)
@@ -119,6 +123,7 @@ protected:
   afx_msg int OnCreate(LPCREATESTRUCT lpCreateStruct);
   afx_msg void OnMenuSelect(UINT, UINT, HMENU);
   afx_msg void OnSettingChange(UINT, LPCTSTR);
+  afx_msg LRESULT OnDarkModeActive(WPARAM, LPARAM);
   DECLARE_MESSAGE_MAP()
 
   BOOL PreTranslateMessage(MSG*);
@@ -156,4 +161,5 @@ protected:
   };
 
   Settings m_settings;
+  DarkMode* m_dark;
 };

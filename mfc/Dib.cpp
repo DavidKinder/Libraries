@@ -347,6 +347,116 @@ void CDibSection::AlphaBlend(const CDibSection* from, LONG fx, LONG fy, LONG fw,
   }
 }
 
+void CDibSection::AlphaBlendDark(COLORREF back)
+{
+  int sr, sg, sb, dr, dg, db, a;
+  DWORD src;
+
+  CSize size = GetSize();
+  for (int y = 0; y < size.cy; y++)
+  {
+    for (int x = 0; x < size.cx; x++)
+    {
+      src = GetPixel(x,y);
+      sb = 0xFF - (src & 0xFF);
+      src >>= 8;
+      sg = 0xFF - (src & 0xFF);
+      src >>= 8;
+      sr = 0xFF - (src & 0xFF);
+      src >>= 8;
+      a = src & 0xFF;
+
+      dr = GetRValue(back);
+      dg = GetGValue(back);
+      db = GetBValue(back);
+
+      if (a == 0)
+      {
+      }
+      else if (a == 0xFF)
+      {
+        dr = sr;
+        dg = sg;
+        db = sb;
+      }
+      else
+      {
+        // Rescale from 0..255 to 0..256
+        a += a>>7;
+
+        dr += (a * (sr - dr) >> 8);
+        dg += (a * (sg - dg) >> 8);
+        db += (a * (sb - db) >> 8);
+      }
+
+      SetPixel(x,y,(0xFF<<24)|(dr<<16)|(dg<<8)|db);
+    }
+  }
+}
+
+void CDibSection::AlphaBlendDark(const CDibSection* from, LONG x, LONG y, BOOL invert)
+{
+  CSize sz = from->GetSize();
+  AlphaBlendDark(from,0,0,sz.cx,sz.cy,x,y,invert);
+}
+
+void CDibSection::AlphaBlendDark(const CDibSection* from, LONG fx, LONG fy, LONG fw, LONG fh, LONG x, LONG y, BOOL invert)
+{
+  int sr, sg, sb, dr, dg, db, a;
+  DWORD src, dest;
+
+  CSize srcSize = from->GetSize();
+  CSize destSize = GetSize();
+
+  for (int y1 = 0; y1 < fh; y1++)
+  {
+    for (int x1 = 0; x1 < fw; x1++)
+    {
+      if ((x+x1 < 0) || (x+x1 >= destSize.cx))
+        continue;
+      if ((y+y1 < 0) || (y+y1 >= destSize.cy))
+        continue;
+
+      dest = GetPixel(x+x1,y+y1);
+      db = dest & 0xFF;
+      dest >>= 8;
+      dg = dest & 0xFF;
+      dest >>= 8;
+      dr = dest & 0xFF;
+
+      src = invert ? from->GetPixel(fx+x1,srcSize.cy-fy-y1-1) : from->GetPixel(fx+x1,fy+y1);
+      sb = 0xFF - (src & 0xFF);
+      src >>= 8;
+      sg = 0xFF - (src & 0xFF);
+      src >>= 8;
+      sr = 0xFF - (src & 0xFF);
+      src >>= 8;
+      a = src & 0xFF;
+
+      if (a == 0)
+      {
+      }
+      else if (a == 0xFF)
+      {
+        dr = sr;
+        dg = sg;
+        db = sb;
+      }
+      else
+      {
+        // Rescale from 0..255 to 0..256
+        a += a>>7;
+
+        dr += (a * (sr - dr) >> 8);
+        dg += (a * (sg - dg) >> 8);
+        db += (a * (sb - db) >> 8);
+      }
+
+      SetPixel(x+x1,y+y1,(0xFF<<24)|(dr<<16)|(dg<<8)|db);
+    }
+  }
+}
+
 void CDibSection::FillSolid(COLORREF back)
 {
   CSize size = GetSize();
