@@ -41,7 +41,7 @@ namespace DPI
   {
   public:
     FontDialog(LOGFONT* logFont, DWORD flags, CWnd* parentWnd);
-	  INT_PTR DoModal();
+    INT_PTR DoModal();
 
   protected:
     // The application LOGFONT structure: this is copied before the dialog

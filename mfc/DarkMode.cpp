@@ -76,11 +76,11 @@ CBrush& DarkMode::GetBrush(DarkModeColour colour)
 
 void DarkMode::DrawSolidBorder(CWnd* wnd, DarkModeColour colour)
 {
-	CWindowDC dc(wnd);
-	CRect rc, rw;
-	wnd->GetClientRect(rc);
-	wnd->GetWindowRect(rw);
-	wnd->ScreenToClient(rw);
+  CWindowDC dc(wnd);
+  CRect rc, rw;
+  wnd->GetClientRect(rc);
+  wnd->GetWindowRect(rw);
+  wnd->ScreenToClient(rw);
   rc.OffsetRect(-rw.TopLeft());
   rw.OffsetRect(-rw.TopLeft());
   dc.ExcludeClipRect(rc);
