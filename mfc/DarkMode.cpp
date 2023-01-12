@@ -15,6 +15,13 @@ DarkMode::DarkMode()
   m_colours[Darkest] = RGB(0x20,0x20,0x20);
 }
 
+DarkMode* DarkMode::GetEnabled(void)
+{
+  if (false) // Enabled in Windows!
+    return new DarkMode();
+  return NULL;
+}
+
 DarkMode* DarkMode::GetActive(CWnd* wnd)
 {
   return (DarkMode*)wnd->GetParentFrame()->SendMessage(WM_DARKMODE_ACTIVE);
@@ -63,7 +70,7 @@ COLORREF DarkMode::GetColour(DarkModeColour colour)
   return m_colours[colour];
 }
 
-CBrush& DarkMode::GetBrush(DarkModeColour colour)
+CBrush* DarkMode::GetBrush(DarkModeColour colour)
 {
   ASSERT(colour >= 0);
   ASSERT(colour < Number_Colours);
@@ -71,7 +78,18 @@ CBrush& DarkMode::GetBrush(DarkModeColour colour)
   CBrush& brush = m_brushes[colour];
   if (brush.GetSafeHandle() == 0)
     brush.CreateSolidBrush(GetColour(colour));
-  return brush;
+  return &brush;
+}
+
+CPen* DarkMode::GetPen(DarkModeColour colour)
+{
+  ASSERT(colour >= 0);
+  ASSERT(colour < Number_Colours);
+
+  CPen& pen = m_pens[colour];
+  if (pen.GetSafeHandle() == 0)
+    pen.CreatePen(PS_SOLID,1,GetColour(colour));
+  return &pen;
 }
 
 void DarkMode::DrawSolidBorder(CWnd* wnd, DarkModeColour colour)
@@ -89,6 +107,75 @@ void DarkMode::DrawSolidBorder(CWnd* wnd, DarkModeColour colour)
   dc.SelectClipRgn(NULL);
 }
 
+BEGIN_MESSAGE_MAP(DarkModeSliderCtrl, CSliderCtrl)
+  ON_NOTIFY_REFLECT(NM_CUSTOMDRAW, OnCustomDraw)
+  ON_WM_ERASEBKGND()
+END_MESSAGE_MAP()
+
+void DarkModeSliderCtrl::OnCustomDraw(NMHDR* nmhdr, LRESULT* result)
+{
+  *result = CDRF_DODEFAULT;
+
+  NMCUSTOMDRAW* nmcd = (NMCUSTOMDRAW*)nmhdr;
+  switch (nmcd->dwDrawStage)
+  {
+  case CDDS_PREPAINT:
+    *result = CDRF_NOTIFYITEMDRAW;
+    break;
+  case CDDS_ITEMPREPAINT:
+    {
+      DarkMode* dark = DarkMode::GetActive(this);
+      if (dark)
+      {
+        CDC* dc = CDC::FromHandle(nmcd->hdc);
+        CRect r(nmcd->rc);
+
+        switch (nmcd->dwItemSpec)
+        {
+        case TBCD_CHANNEL:
+          *result = CDRF_SKIPDEFAULT;
+          {
+            CBrush* oldBrush = dc->SelectObject(dark->GetBrush(DarkMode::Darkest));
+            CPen* oldPen = dc->SelectObject(dark->GetPen(DarkMode::Dark3));
+            dc->Rectangle(r);
+            dc->SelectObject(oldPen);
+            dc->SelectObject(oldBrush);
+          }
+          break;
+        case TBCD_THUMB:
+          *result = CDRF_SKIPDEFAULT;
+          {
+            DarkMode::DarkModeColour dmc = DarkMode::Dark2;
+            if (nmcd->uItemState & CDIS_SELECTED)
+              dmc = DarkMode::Fore;
+            else
+            {
+              // Is the mouse over the thumb?
+              CRect scrR(r);
+              ClientToScreen(scrR);
+              CPoint cursor;
+              ::GetCursorPos(&cursor);
+              if (scrR.PtInRect(cursor))
+                dmc = DarkMode::Dark1;
+            }
+            dc->FillSolidRect(r,dark->GetColour(dmc));
+          }
+          break;
+        case TBCD_TICS:
+          *result = CDRF_SKIPDEFAULT;
+          break;
+        }
+      }
+    }
+    break;
+  }
+}
+
+BOOL DarkModeSliderCtrl::OnEraseBkgnd(CDC* pDC)
+{
+  return TRUE;
+}
+
 BEGIN_MESSAGE_MAP(DarkModeToolBar, CToolBar)
   ON_NOTIFY_REFLECT(NM_CUSTOMDRAW, OnCustomDraw)
 END_MESSAGE_MAP()
@@ -104,12 +191,14 @@ void DarkModeToolBar::OnCustomDraw(NMHDR* nmhdr, LRESULT* result)
     *result = CDRF_NOTIFYITEMDRAW;
     break;
   case CDDS_ITEMPREPAINT:
-    DarkMode* dark = DarkMode::GetActive(this);
-    if (dark)
     {
-      *result = TBCDRF_NOEDGES|TBCDRF_NOETCHEDEFFECT|TBCDRF_HILITEHOTTRACK;
-      nmtbcd->clrHighlightHotTrack = dark->GetColour(DarkMode::Dark2);
-      nmtbcd->clrText = dark->GetColour(DarkMode::Fore);
+      DarkMode* dark = DarkMode::GetActive(this);
+      if (dark)
+      {
+        *result = TBCDRF_NOEDGES|TBCDRF_NOETCHEDEFFECT|TBCDRF_HILITEHOTTRACK;
+        nmtbcd->clrHighlightHotTrack = dark->GetColour(DarkMode::Dark2);
+        nmtbcd->clrText = dark->GetColour(DarkMode::Fore);
+      }
     }
     break;
   }
