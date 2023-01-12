@@ -37,10 +37,13 @@ protected:
   CPen m_pens[Number_Colours];
 };
 
-class DarkModeToolBar : public CToolBar
+class DarkModeProgressCtrl : public CProgressCtrl
 {
-protected: 
-  afx_msg void OnCustomDraw(NMHDR*, LRESULT*);
+public:
+  void SetDarkMode(DarkMode* dark);
+
+protected:
+  afx_msg void OnNcPaint();
   DECLARE_MESSAGE_MAP()
 };
 
@@ -49,5 +52,12 @@ class DarkModeSliderCtrl : public CSliderCtrl
 protected:
   afx_msg void OnCustomDraw(NMHDR*, LRESULT*);
   afx_msg BOOL OnEraseBkgnd(CDC* pDC);
+  DECLARE_MESSAGE_MAP()
+};
+
+class DarkModeToolBar : public CToolBar
+{
+protected:
+  afx_msg void OnCustomDraw(NMHDR*, LRESULT*);
   DECLARE_MESSAGE_MAP()
 };

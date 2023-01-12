@@ -107,6 +107,31 @@ void DarkMode::DrawSolidBorder(CWnd* wnd, DarkModeColour colour)
   dc.SelectClipRgn(NULL);
 }
 
+BEGIN_MESSAGE_MAP(DarkModeProgressCtrl, CProgressCtrl)
+  ON_WM_NCPAINT()
+END_MESSAGE_MAP()
+
+void DarkModeProgressCtrl::SetDarkMode(DarkMode* dark)
+{
+  LPCWSTR theme = dark ? L"" : NULL;
+  ::SetWindowTheme(GetSafeHwnd(),theme,theme);
+
+  if (dark)
+  {
+    SetBkColor(dark->GetColour(DarkMode::Back));
+    SetBarColor(dark->GetColour(DarkMode::Dark1));
+  }
+}
+
+void DarkModeProgressCtrl::OnNcPaint()
+{
+  DarkMode* dark = DarkMode::GetActive(this);
+  if (dark)
+    dark->DrawSolidBorder(this,DarkMode::Dark3);
+  else
+    Default();
+}
+
 BEGIN_MESSAGE_MAP(DarkModeSliderCtrl, CSliderCtrl)
   ON_NOTIFY_REFLECT(NM_CUSTOMDRAW, OnCustomDraw)
   ON_WM_ERASEBKGND()
