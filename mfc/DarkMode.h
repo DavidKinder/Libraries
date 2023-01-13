@@ -14,7 +14,7 @@ public:
   static void Set(CReBar* bar, DarkMode* dark);
   static void Set(CControlBar* bar, CReBar* rebar, int index, DarkMode* dark);
 
-  enum DarkModeColour
+  enum DarkColour
   {
     Fore = 0,
     Dark1,
@@ -25,16 +25,22 @@ public:
     Number_Colours
   };
 
-  COLORREF GetColour(DarkModeColour colour);
-  CBrush* GetBrush(DarkModeColour colour);
-  CPen* GetPen(DarkModeColour colour);
+  COLORREF GetColour(DarkColour colour);
+  CBrush* GetBrush(DarkColour colour);
 
-  void DrawSolidBorder(CWnd* wnd, DarkModeColour colour);
+  void DrawBorder(CDC* dc, const CRect& r, DarkColour border, DarkColour fill);
+  void DrawNonClientBorder(CWnd* wnd, DarkColour colour, DarkColour fill);
 
 protected:
   COLORREF m_colours[Number_Colours];
   CBrush m_brushes[Number_Colours];
-  CPen m_pens[Number_Colours];
+};
+
+class DarkModeButton : public CButton
+{
+protected:
+  afx_msg void OnCustomDraw(NMHDR*, LRESULT*);
+  DECLARE_MESSAGE_MAP()
 };
 
 class DarkModeProgressCtrl : public CProgressCtrl

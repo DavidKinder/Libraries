@@ -62,7 +62,7 @@ void DarkMode::Set(CControlBar* bar, CReBar* rebar, int index, DarkMode* dark)
   }
 }
 
-COLORREF DarkMode::GetColour(DarkModeColour colour)
+COLORREF DarkMode::GetColour(DarkColour colour)
 {
   ASSERT(colour >= 0);
   ASSERT(colour < Number_Colours);
@@ -70,7 +70,7 @@ COLORREF DarkMode::GetColour(DarkModeColour colour)
   return m_colours[colour];
 }
 
-CBrush* DarkMode::GetBrush(DarkModeColour colour)
+CBrush* DarkMode::GetBrush(DarkColour colour)
 {
   ASSERT(colour >= 0);
   ASSERT(colour < Number_Colours);
@@ -81,30 +81,86 @@ CBrush* DarkMode::GetBrush(DarkModeColour colour)
   return &brush;
 }
 
-CPen* DarkMode::GetPen(DarkModeColour colour)
+void DarkMode::DrawBorder(CDC* dc, const CRect& r, DarkColour border, DarkColour fill)
 {
-  ASSERT(colour >= 0);
-  ASSERT(colour < Number_Colours);
+  CPen pen;
+  pen.CreatePen(PS_SOLID,1,GetColour(border));
 
-  CPen& pen = m_pens[colour];
-  if (pen.GetSafeHandle() == 0)
-    pen.CreatePen(PS_SOLID,1,GetColour(colour));
-  return &pen;
+  CBrush* oldBrush = dc->SelectObject(GetBrush(fill));
+  CPen* oldPen = dc->SelectObject(&pen);
+  dc->Rectangle(r);
+  dc->SelectObject(oldPen);
+  dc->SelectObject(oldBrush);
 }
 
-void DarkMode::DrawSolidBorder(CWnd* wnd, DarkModeColour colour)
+void DarkMode::DrawNonClientBorder(CWnd* wnd, DarkColour border, DarkColour fill)
 {
   CWindowDC dc(wnd);
-  CRect rc, rw;
-  wnd->GetClientRect(rc);
+
+  // Get the window and client rectangles, in the window co-ordinate space
+  CRect rw, rc;
   wnd->GetWindowRect(rw);
   wnd->ScreenToClient(rw);
+  wnd->GetClientRect(rc);
   rc.OffsetRect(-rw.TopLeft());
   rw.OffsetRect(-rw.TopLeft());
+
+  // Make the clipping region the window rectangle, excluding the client rectangle
   dc.ExcludeClipRect(rc);
   dc.IntersectClipRect(rw);
-  dc.FillSolidRect(rw,GetColour(colour));
+
+  // Draw the non-client border
+  DrawBorder(&dc,rw,border,fill);
+
+  // Reset the clipping region
   dc.SelectClipRgn(NULL);
+}
+
+BEGIN_MESSAGE_MAP(DarkModeButton, CButton)
+  ON_NOTIFY_REFLECT(NM_CUSTOMDRAW, OnCustomDraw)
+END_MESSAGE_MAP()
+
+void DarkModeButton::OnCustomDraw(NMHDR* nmhdr, LRESULT* result)
+{
+  NMCUSTOMDRAW* nmcd = (NMCUSTOMDRAW*)nmhdr;
+  *result = CDRF_DODEFAULT;
+
+  DarkMode* dark = DarkMode::GetActive(this);
+  if (dark)
+  {
+    CDC* dc = CDC::FromHandle(nmcd->hdc);
+    CRect r(nmcd->rc);
+
+    switch (nmcd->dwDrawStage)
+    {
+    case CDDS_PREERASE:
+    case CDDS_PREPAINT:
+      *result = CDRF_SKIPDEFAULT;
+      {
+        DarkMode::DarkColour border = DarkMode::Dark2;
+        DarkMode::DarkColour fill = DarkMode::Darkest;
+        DarkMode::DarkColour text = DarkMode::Fore;
+
+        if (nmcd->uItemState & CDIS_SELECTED)
+          fill = DarkMode::Dark1;
+        else if (nmcd->uItemState & CDIS_HOT)
+          fill = DarkMode::Dark2;
+        else if (nmcd->uItemState & CDIS_DISABLED)
+        {
+          border = DarkMode::Dark3;
+          text = DarkMode::Dark3;
+        }
+        dark->DrawBorder(dc,r,border,fill);
+
+        CString label;
+        GetWindowText(label);
+        dc->SetTextColor(dark->GetColour(text));
+        dc->SetBkMode(TRANSPARENT);
+        dc->DrawText(label,r,DT_CENTER|DT_VCENTER|DT_HIDEPREFIX|DT_SINGLELINE);
+      }
+      break;
+    }
+  }
 }
 
 BEGIN_MESSAGE_MAP(DarkModeProgressCtrl, CProgressCtrl)
@@ -127,7 +183,7 @@ void DarkModeProgressCtrl::OnNcPaint()
 {
   DarkMode* dark = DarkMode::GetActive(this);
   if (dark)
-    dark->DrawSolidBorder(this,DarkMode::Dark3);
+    dark->DrawNonClientBorder(this,DarkMode::Dark3,DarkMode::Darkest);
   else
     Default();
 }
@@ -159,20 +215,14 @@ void DarkModeSliderCtrl::OnCustomDraw(NMHDR* nmhdr, LRESULT* result)
         {
         case TBCD_CHANNEL:
           *result = CDRF_SKIPDEFAULT;
-          {
-            CBrush* oldBrush = dc->SelectObject(dark->GetBrush(DarkMode::Darkest));
-            CPen* oldPen = dc->SelectObject(dark->GetPen(DarkMode::Dark3));
-            dc->Rectangle(r);
-            dc->SelectObject(oldPen);
-            dc->SelectObject(oldBrush);
-          }
+          dark->DrawBorder(dc,r,DarkMode::Dark3,DarkMode::Darkest);
           break;
         case TBCD_THUMB:
           *result = CDRF_SKIPDEFAULT;
           {
-            DarkMode::DarkModeColour dmc = DarkMode::Dark2;
+            DarkMode::DarkColour thumb = DarkMode::Dark2;
             if (nmcd->uItemState & CDIS_SELECTED)
-              dmc = DarkMode::Fore;
+              thumb = DarkMode::Fore;
             else
             {
               // Is the mouse over the thumb?
@@ -181,9 +231,9 @@ void DarkModeSliderCtrl::OnCustomDraw(NMHDR* nmhdr, LRESULT* result)
               CPoint cursor;
               ::GetCursorPos(&cursor);
               if (scrR.PtInRect(cursor))
-                dmc = DarkMode::Dark1;
+                thumb = DarkMode::Dark1;
             }
-            dc->FillSolidRect(r,dark->GetColour(dmc));
+            dc->FillSolidRect(r,dark->GetColour(thumb));
           }
           break;
         case TBCD_TICS:
