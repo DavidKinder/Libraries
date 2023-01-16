@@ -8,7 +8,7 @@
 DarkMode::DarkMode()
 {
   m_colours[Back]    = RGB(0x00,0x00,0x00);
-  m_colours[Fore]    = RGB(0xe0,0xe0,0xe0);
+  m_colours[Fore]    = RGB(0xF0,0xF0,0xF0);
   m_colours[Dark1]   = RGB(0x80,0x80,0x80);
   m_colours[Dark2]   = RGB(0x60,0x60,0x60);
   m_colours[Dark3]   = RGB(0x40,0x40,0x40);
@@ -186,6 +186,91 @@ void DarkModeProgressCtrl::OnNcPaint()
     dark->DrawNonClientBorder(this,DarkMode::Dark3,DarkMode::Darkest);
   else
     Default();
+}
+
+BEGIN_MESSAGE_MAP(DarkModeRadioButton, CButton)
+  ON_NOTIFY_REFLECT(NM_CUSTOMDRAW, OnCustomDraw)
+END_MESSAGE_MAP()
+
+void DarkModeRadioButton::OnCustomDraw(NMHDR* nmhdr, LRESULT* result)
+{
+  NMCUSTOMDRAW* nmcd = (NMCUSTOMDRAW*)nmhdr;
+  *result = CDRF_DODEFAULT;
+
+  DarkMode* dark = DarkMode::GetActive(this);
+  if (dark)
+  {
+    CDC* dc = CDC::FromHandle(nmcd->hdc);
+    CRect r(nmcd->rc);
+
+    switch (nmcd->dwDrawStage)
+    {
+    case CDDS_PREERASE:
+    case CDDS_PREPAINT:
+      *result = CDRF_SKIPDEFAULT;
+      {
+        // Get the the size of the radio button from the font height
+        TEXTMETRIC metrics;
+        dc->GetTextMetrics(&metrics);
+        int btnSize = metrics.tmHeight;
+
+        // Get the foreground pen and background brush
+        DarkMode::DarkColour fore = DarkMode::Fore;
+        CBrush back;
+        if (nmcd->uItemState & CDIS_HOT)
+          fore = DarkMode::Dark1;
+        if (nmcd->uItemState & CDIS_SELECTED)
+        {
+          fore = DarkMode::Dark2;
+          back.CreateSolidBrush(dark->GetColour(DarkMode::Darkest));
+        }
+        else
+          back.CreateStockObject(NULL_BRUSH);
+        CPen pen;
+        pen.CreatePen(PS_SOLID,1,dark->GetColour(fore));
+
+        // Draw the border and background of the button
+        CBrush* oldBrush = dc->SelectObject(&back);
+        CPen* oldPen = dc->SelectObject(&pen);
+        CRect btnR(r.TopLeft(),CSize(btnSize,btnSize));
+        dc->Rectangle(btnR);
+
+        // Draw the button center, if needed
+        if (GetCheck() == BST_CHECKED)
+        {
+          btnR.DeflateRect(5,5);
+          dc->FillSolidRect(btnR,dark->GetColour(fore));
+        }
+
+        // Draw the label
+        CString label;
+        GetWindowText(label);
+        dc->SetTextColor(dark->GetColour(DarkMode::Fore));
+        dc->SetBkMode(TRANSPARENT);
+        CRect textR(r);
+        textR.left += (3*btnSize)/2;
+        UINT dtFlags = DT_LEFT|DT_TOP|DT_HIDEPREFIX;
+        dc->DrawText(label,textR,dtFlags);
+
+        // Draw the focus rectangle, if needed
+        if (CWnd::GetFocus() == this)
+        {
+          if ((SendMessage(WM_QUERYUISTATE) & UISF_HIDEFOCUS) == 0)
+          {
+            dc->DrawText(label,textR,dtFlags|DT_CALCRECT);
+            textR.InflateRect(2,0);
+            dc->SetTextColor(dark->GetColour(DarkMode::Fore));
+            dc->SetBkColor(dark->GetColour(DarkMode::Back));
+            dc->DrawFocusRect(textR);
+          }
+        }
+
+        dc->SelectObject(oldPen);
+        dc->SelectObject(oldBrush);
+      }
+      break;
+    }
+  }
 }
 
 BEGIN_MESSAGE_MAP(DarkModeSliderCtrl, CSliderCtrl)

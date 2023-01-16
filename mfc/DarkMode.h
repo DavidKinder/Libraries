@@ -53,6 +53,13 @@ protected:
   DECLARE_MESSAGE_MAP()
 };
 
+class DarkModeRadioButton : public CButton
+{
+protected:
+  afx_msg void OnCustomDraw(NMHDR*, LRESULT*);
+  DECLARE_MESSAGE_MAP()
+};
+
 class DarkModeSliderCtrl : public CSliderCtrl
 {
 protected:
