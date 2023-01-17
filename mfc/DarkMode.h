@@ -22,6 +22,7 @@ public:
     Dark3,
     Darkest,
     Back,
+    No_Colour,
     Number_Colours
   };
 
@@ -34,6 +35,23 @@ public:
 protected:
   COLORREF m_colours[Number_Colours];
   CBrush m_brushes[Number_Colours];
+};
+
+class DarkModeCheckButton : public CButton
+{
+public:
+  DarkModeCheckButton();
+  ~DarkModeCheckButton();
+
+  BOOL SubclassDlgItem(UINT id, CWnd* parent, UINT imageId);
+
+protected:
+  afx_msg void OnCustomDraw(NMHDR*, LRESULT*);
+  DECLARE_MESSAGE_MAP()
+
+private:
+  struct Impl;
+  Impl* m_impl;
 };
 
 class DarkModeButton : public CButton

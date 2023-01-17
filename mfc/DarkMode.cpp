@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "DarkMode.h"
+#include "ImagePNG.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -13,6 +14,7 @@ DarkMode::DarkMode()
   m_colours[Dark2]   = RGB(0x60,0x60,0x60);
   m_colours[Dark3]   = RGB(0x40,0x40,0x40);
   m_colours[Darkest] = RGB(0x20,0x20,0x20);
+  m_colours[No_Colour] = 0;
 }
 
 DarkMode* DarkMode::GetEnabled(void)
@@ -77,7 +79,12 @@ CBrush* DarkMode::GetBrush(DarkColour colour)
 
   CBrush& brush = m_brushes[colour];
   if (brush.GetSafeHandle() == 0)
-    brush.CreateSolidBrush(GetColour(colour));
+  {
+    if (colour == No_Colour)
+      brush.CreateStockObject(NULL_BRUSH);
+    else
+      brush.CreateSolidBrush(GetColour(colour));
+  }
   return &brush;
 }
 
@@ -114,6 +121,134 @@ void DarkMode::DrawNonClientBorder(CWnd* wnd, DarkColour border, DarkColour fill
 
   // Reset the clipping region
   dc.SelectClipRgn(NULL);
+}
+
+BEGIN_MESSAGE_MAP(DarkModeCheckButton, CButton)
+  ON_NOTIFY_REFLECT(NM_CUSTOMDRAW, OnCustomDraw)
+END_MESSAGE_MAP()
+
+struct DarkModeCheckButton::Impl
+{
+  ImagePNG check;
+};
+
+static const int DarkModeCheckBorder = 3;
+
+DarkModeCheckButton::DarkModeCheckButton()
+{
+  m_impl = new Impl;
+}
+
+DarkModeCheckButton::~DarkModeCheckButton()
+{
+  delete m_impl;
+}
+
+BOOL DarkModeCheckButton::SubclassDlgItem(UINT id, CWnd* parent, UINT imageId)
+{
+  if (CWnd::SubclassDlgItem(id,parent))
+  {
+    ImagePNG img;
+    if (img.LoadResource(imageId))
+    {
+      // Get the the size of the check image from the font height
+      CDC* dc = GetDC();
+      CFont* oldFont = dc->SelectObject(GetFont());
+      TEXTMETRIC metrics;
+      dc->GetTextMetrics(&metrics);
+      dc->SelectObject(oldFont);
+      ReleaseDC(dc);
+      int imgSize = metrics.tmHeight - (2*DarkModeCheckBorder);
+
+      m_impl->check.Scale(img,CSize(imgSize,imgSize));
+      return TRUE;
+    }
+  }
+  return FALSE;
+}
+
+void DarkModeCheckButton::OnCustomDraw(NMHDR* nmhdr, LRESULT* result)
+{
+  NMCUSTOMDRAW* nmcd = (NMCUSTOMDRAW*)nmhdr;
+  *result = CDRF_DODEFAULT;
+
+  DarkMode* dark = DarkMode::GetActive(this);
+  if (dark)
+  {
+    CDC* dc = CDC::FromHandle(nmcd->hdc);
+    CRect r(nmcd->rc);
+
+    switch (nmcd->dwDrawStage)
+    {
+    case CDDS_PREERASE:
+    case CDDS_PREPAINT:
+      *result = CDRF_SKIPDEFAULT;
+      {
+        // Get the the size of the check box from the font height
+        TEXTMETRIC metrics;
+        dc->GetTextMetrics(&metrics);
+        int btnSize = metrics.tmHeight;
+        int y = r.Height()-btnSize;
+
+        // Get the colours for drawing
+        DarkMode::DarkColour back = DarkMode::No_Colour;
+        DarkMode::DarkColour fore = DarkMode::Fore;
+        if (nmcd->uItemState & CDIS_HOT)
+          back = DarkMode::Dark2;
+        if (nmcd->uItemState & CDIS_SELECTED)
+        {
+          fore = DarkMode::Dark1;
+          back = DarkMode::Dark3;
+        }
+
+        // Draw the border and background of the button
+        CBrush* oldBrush = dc->SelectObject(dark->GetBrush(back));
+        CPen borderPen;
+        borderPen.CreatePen(PS_SOLID,1,dark->GetColour(DarkMode::Fore));
+        CPen* oldPen = dc->SelectObject(&borderPen);
+        CRect btnR(r.TopLeft(),CSize(btnSize,btnSize));
+        btnR.OffsetRect(0,y);
+        dc->Rectangle(btnR);
+
+        // Draw the check, if needed
+        if (GetCheck() == BST_CHECKED)
+        {
+          ImagePNG image;
+          image.Copy(m_impl->check);
+          image.Fill(dark->GetColour(fore));
+          image.Blend(dark->GetColour(back));
+          image.Draw(dc,r.TopLeft()+CPoint(DarkModeCheckBorder,DarkModeCheckBorder));
+        }
+
+        // Draw the label
+        CString label;
+        GetWindowText(label);
+        dc->SetTextColor(dark->GetColour(DarkMode::Fore));
+        dc->SetBkMode(TRANSPARENT);
+        CRect textR(r);
+        textR.OffsetRect((3*btnSize)/2,y);
+        UINT dtFlags = DT_LEFT|DT_TOP|DT_HIDEPREFIX;
+        dc->DrawText(label,textR,dtFlags);
+
+        // Draw the focus rectangle, if needed
+        if (CWnd::GetFocus() == this)
+        {
+          if ((SendMessage(WM_QUERYUISTATE) & UISF_HIDEFOCUS) == 0)
+          {
+            dc->DrawText(label,textR,dtFlags|DT_CALCRECT);
+            textR.InflateRect(2,0);
+            dc->SetTextColor(dark->GetColour(DarkMode::Fore));
+            dc->SetBkColor(dark->GetColour(DarkMode::Back));
+            dc->DrawFocusRect(textR);
+          }
+        }
+
+        dc->SelectObject(oldPen);
+        dc->SelectObject(oldBrush);
+      }
+      break;
+    }
+  }
 }
 
 BEGIN_MESSAGE_MAP(DarkModeButton, CButton)
@@ -213,26 +348,26 @@ void DarkModeRadioButton::OnCustomDraw(NMHDR* nmhdr, LRESULT* result)
         TEXTMETRIC metrics;
         dc->GetTextMetrics(&metrics);
         int btnSize = metrics.tmHeight;
+        int y = r.Height()-btnSize;
 
-        // Get the foreground pen and background brush
+        // Get the colours for drawing
+        DarkMode::DarkColour back = DarkMode::No_Colour;
         DarkMode::DarkColour fore = DarkMode::Fore;
-        CBrush back;
         if (nmcd->uItemState & CDIS_HOT)
-          fore = DarkMode::Dark1;
+          back = DarkMode::Dark2;
         if (nmcd->uItemState & CDIS_SELECTED)
         {
-          fore = DarkMode::Dark2;
-          back.CreateSolidBrush(dark->GetColour(DarkMode::Darkest));
+          fore = DarkMode::Dark1;
+          back = DarkMode::Dark3;
         }
-        else
-          back.CreateStockObject(NULL_BRUSH);
-        CPen pen;
-        pen.CreatePen(PS_SOLID,1,dark->GetColour(fore));
 
         // Draw the border and background of the button
-        CBrush* oldBrush = dc->SelectObject(&back);
-        CPen* oldPen = dc->SelectObject(&pen);
+        CBrush* oldBrush = dc->SelectObject(dark->GetBrush(back));
+        CPen borderPen;
+        borderPen.CreatePen(PS_SOLID,1,dark->GetColour(DarkMode::Fore));
+        CPen* oldPen = dc->SelectObject(&borderPen);
         CRect btnR(r.TopLeft(),CSize(btnSize,btnSize));
+        btnR.OffsetRect(0,y);
         dc->Rectangle(btnR);
 
         // Draw the button center, if needed
@@ -248,7 +383,7 @@ void DarkModeRadioButton::OnCustomDraw(NMHDR* nmhdr, LRESULT* result)
         dc->SetTextColor(dark->GetColour(DarkMode::Fore));
         dc->SetBkMode(TRANSPARENT);
         CRect textR(r);
-        textR.left += (3*btnSize)/2;
+        textR.OffsetRect((3*btnSize)/2,y);
         UINT dtFlags = DT_LEFT|DT_TOP|DT_HIDEPREFIX;
         dc->DrawText(label,textR,dtFlags);
 
