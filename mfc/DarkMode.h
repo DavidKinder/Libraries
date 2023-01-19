@@ -32,9 +32,18 @@ public:
   void DrawBorder(CDC* dc, const CRect& r, DarkColour border, DarkColour fill);
   void DrawNonClientBorder(CWnd* wnd, DarkColour colour, DarkColour fill);
 
+  bool CursorInRect(CWnd* wnd, CRect r);
+
 protected:
   COLORREF m_colours[Number_Colours];
   CBrush m_brushes[Number_Colours];
+};
+
+class DarkModeButton : public CButton
+{
+protected:
+  afx_msg void OnCustomDraw(NMHDR*, LRESULT*);
+  DECLARE_MESSAGE_MAP()
 };
 
 class DarkModeCheckButton : public CButton
@@ -54,10 +63,25 @@ private:
   Impl* m_impl;
 };
 
-class DarkModeButton : public CButton
+class DarkModeComboBox : public CComboBox
+{
+public:
+  void SetDarkBorder(DarkMode::DarkColour colour, DarkMode::DarkColour activeColour);
+
+	int SetCurSel(int select);
+
+protected:
+  afx_msg void OnPaint();
+  DECLARE_MESSAGE_MAP()
+
+  DarkMode::DarkColour m_border = DarkMode::Dark1;
+  DarkMode::DarkColour m_activeBorder = DarkMode::Fore;
+};
+
+class DarkModeGroupBox : public CButton
 {
 protected:
-  afx_msg void OnCustomDraw(NMHDR*, LRESULT*);
+  afx_msg void OnPaint();
   DECLARE_MESSAGE_MAP()
 };
 
@@ -89,6 +113,7 @@ protected:
 class DarkModeToolBar : public CToolBar
 {
 protected:
+  afx_msg HBRUSH OnCtlColor(CDC* pDC, CWnd* pWnd, UINT nCtlColor);
   afx_msg void OnCustomDraw(NMHDR*, LRESULT*);
   DECLARE_MESSAGE_MAP()
 };

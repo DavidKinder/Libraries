@@ -123,6 +123,64 @@ void DarkMode::DrawNonClientBorder(CWnd* wnd, DarkColour border, DarkColour fill
   dc.SelectClipRgn(NULL);
 }
 
+bool DarkMode::CursorInRect(CWnd* wnd, CRect r)
+{
+  CPoint cursor;
+  ::GetCursorPos(&cursor);
+  wnd->ClientToScreen(r);
+  return r.PtInRect(cursor);
+}
+
+BEGIN_MESSAGE_MAP(DarkModeButton, CButton)
+  ON_NOTIFY_REFLECT(NM_CUSTOMDRAW, OnCustomDraw)
+END_MESSAGE_MAP()
+
+void DarkModeButton::OnCustomDraw(NMHDR* nmhdr, LRESULT* result)
+{
+  NMCUSTOMDRAW* nmcd = (NMCUSTOMDRAW*)nmhdr;
+  *result = CDRF_DODEFAULT;
+
+  DarkMode* dark = DarkMode::GetActive(this);
+  if (dark)
+  {
+    CDC* dc = CDC::FromHandle(nmcd->hdc);
+    CRect r(nmcd->rc);
+
+    switch (nmcd->dwDrawStage)
+    {
+    case CDDS_PREERASE:
+    case CDDS_PREPAINT:
+      *result = CDRF_SKIPDEFAULT;
+      {
+        DarkMode::DarkColour border = DarkMode::Dark2;
+        DarkMode::DarkColour fill = DarkMode::Darkest;
+        DarkMode::DarkColour text = DarkMode::Fore;
+
+        if (nmcd->uItemState & CDIS_SELECTED)
+          fill = DarkMode::Dark1;
+        else if (nmcd->uItemState & CDIS_HOT)
+          fill = DarkMode::Dark2;
+        else if (nmcd->uItemState & CDIS_DISABLED)
+        {
+          border = DarkMode::Dark3;
+          text = DarkMode::Dark3;
+        }
+        dark->DrawBorder(dc,r,border,fill);
+
+        CString label;
+        GetWindowText(label);
+        dc->SetTextColor(dark->GetColour(text));
+        dc->SetBkMode(TRANSPARENT);
+        CFont* oldFont = dc->SelectObject(GetFont());
+        dc->DrawText(label,r,DT_CENTER|DT_VCENTER|DT_HIDEPREFIX|DT_SINGLELINE);
+
+        dc->SelectObject(oldFont);
+      }
+      break;
+    }
+  }
+}
+
 BEGIN_MESSAGE_MAP(DarkModeCheckButton, CButton)
   ON_NOTIFY_REFLECT(NM_CUSTOMDRAW, OnCustomDraw)
 END_MESSAGE_MAP()
@@ -192,23 +250,19 @@ void DarkModeCheckButton::OnCustomDraw(NMHDR* nmhdr, LRESULT* result)
 
         // Get the colours for drawing
         DarkMode::DarkColour back = DarkMode::No_Colour;
-        DarkMode::DarkColour fore = DarkMode::Fore;
+        DarkMode::DarkColour fore = DarkMode::Dark1;
         if (nmcd->uItemState & CDIS_HOT)
-          back = DarkMode::Dark2;
+          fore = DarkMode::Fore;
         if (nmcd->uItemState & CDIS_SELECTED)
         {
-          fore = DarkMode::Dark1;
+          fore = DarkMode::Fore;
           back = DarkMode::Dark3;
         }
 
         // Draw the border and background of the button
-        CBrush* oldBrush = dc->SelectObject(dark->GetBrush(back));
-        CPen borderPen;
-        borderPen.CreatePen(PS_SOLID,1,dark->GetColour(DarkMode::Fore));
-        CPen* oldPen = dc->SelectObject(&borderPen);
         CRect btnR(r.TopLeft(),CSize(btnSize,btnSize));
         btnR.OffsetRect(0,y);
-        dc->Rectangle(btnR);
+        dark->DrawBorder(dc,btnR,fore,back);
 
         // Draw the check, if needed
         if (GetCheck() == BST_CHECKED)
@@ -228,6 +282,7 @@ void DarkModeCheckButton::OnCustomDraw(NMHDR* nmhdr, LRESULT* result)
         CRect textR(r);
         textR.OffsetRect((3*btnSize)/2,y);
         UINT dtFlags = DT_LEFT|DT_TOP|DT_HIDEPREFIX;
+        CFont* oldFont = dc->SelectObject(GetFont());
         dc->DrawText(label,textR,dtFlags);
 
         // Draw the focus rectangle, if needed
@@ -243,59 +298,147 @@ void DarkModeCheckButton::OnCustomDraw(NMHDR* nmhdr, LRESULT* result)
           }
         }
 
-        dc->SelectObject(oldPen);
-        dc->SelectObject(oldBrush);
+        dc->SelectObject(oldFont);
       }
       break;
     }
   }
 }
 
-BEGIN_MESSAGE_MAP(DarkModeButton, CButton)
-  ON_NOTIFY_REFLECT(NM_CUSTOMDRAW, OnCustomDraw)
+BEGIN_MESSAGE_MAP(DarkModeComboBox, CComboBox)
+  ON_WM_PAINT()
 END_MESSAGE_MAP()
 
-void DarkModeButton::OnCustomDraw(NMHDR* nmhdr, LRESULT* result)
+void DarkModeComboBox::SetDarkBorder(DarkMode::DarkColour colour, DarkMode::DarkColour activeColour)
 {
-  NMCUSTOMDRAW* nmcd = (NMCUSTOMDRAW*)nmhdr;
-  *result = CDRF_DODEFAULT;
+  m_border = colour;
+  m_activeBorder = activeColour;
+}
 
+int DarkModeComboBox::SetCurSel(int select)
+{
+  int result = CComboBox::SetCurSel(select);
+
+  // Changing the combo box selection will cause the internal painting logic
+  // of the control to be called directly, so here we invalidate the control
+  // so that our painting logic is used.
+  Invalidate();
+  return result;
+}
+
+void DarkModeComboBox::OnPaint()
+{
   DarkMode* dark = DarkMode::GetActive(this);
   if (dark)
   {
-    CDC* dc = CDC::FromHandle(nmcd->hdc);
-    CRect r(nmcd->rc);
+    CRect r;
+    GetClientRect(r);
+    CPaintDC dc(this);
 
-    switch (nmcd->dwDrawStage)
+    // Get details of the control state
+    COMBOBOXINFO info = { sizeof(COMBOBOXINFO), 0 };
+    GetComboBoxInfo(&info);
+    CRect itemR(info.rcItem);
+    CRect arrowR(info.rcButton);
+
+    // Get the colours for drawing
+    DarkMode::DarkColour border = m_border;
+    DarkMode::DarkColour fill = DarkMode::Darkest;
+    if (GetDroppedState())
     {
-    case CDDS_PREERASE:
-    case CDDS_PREPAINT:
-      *result = CDRF_SKIPDEFAULT;
-      {
-        DarkMode::DarkColour border = DarkMode::Dark2;
-        DarkMode::DarkColour fill = DarkMode::Darkest;
-        DarkMode::DarkColour text = DarkMode::Fore;
-
-        if (nmcd->uItemState & CDIS_SELECTED)
-          fill = DarkMode::Dark1;
-        else if (nmcd->uItemState & CDIS_HOT)
-          fill = DarkMode::Dark2;
-        else if (nmcd->uItemState & CDIS_DISABLED)
-        {
-          border = DarkMode::Dark3;
-          text = DarkMode::Dark3;
-        }
-        dark->DrawBorder(dc,r,border,fill);
-
-        CString label;
-        GetWindowText(label);
-        dc->SetTextColor(dark->GetColour(text));
-        dc->SetBkMode(TRANSPARENT);
-        dc->DrawText(label,r,DT_CENTER|DT_VCENTER|DT_HIDEPREFIX|DT_SINGLELINE);
-      }
-      break;
+      border = m_activeBorder;
+      fill = DarkMode::Dark2;
     }
+    else if (dark->CursorInRect(this,r))
+    {
+      border = m_activeBorder;
+      fill = DarkMode::Dark3;
+    }
+
+    // Draw the border and background
+    dark->DrawBorder(&dc,r,border,fill);
+
+    // Draw the dropdown arrow
+    CPen arrowPen;
+    arrowPen.CreatePen(PS_SOLID,1,dark->GetColour(border));
+    CPen* oldPen = dc.SelectObject(&arrowPen);
+    CPoint pt = arrowR.CenterPoint();
+    int arrowH = arrowR.Height()/5;
+    pt.y += arrowH/2;
+    for (int i = 0; i < arrowH; i++)
+    {
+      dc.MoveTo(pt.x-i,pt.y-i);
+      dc.LineTo(pt.x-i+1,pt.y-i);
+      dc.MoveTo(pt.x+i,pt.y-i);
+      dc.LineTo(pt.x+i+1,pt.y-i);
+    }
+
+    // Draw the selected item
+    CString itemText;
+    int itemIndex = GetCurSel();
+    if (itemIndex != CB_ERR)
+      GetLBText(itemIndex,itemText);
+    dc.SetTextColor(dark->GetColour(DarkMode::Fore));
+    dc.SetBkMode(TRANSPARENT);
+    itemR.left += 2;
+    CFont* oldFont = dc.SelectObject(GetFont());
+    dc.DrawText(itemText,itemR,DT_LEFT|DT_VCENTER|DT_HIDEPREFIX|DT_END_ELLIPSIS);
+
+    // Draw the focus rectangle, if needed
+    if (!GetDroppedState() && (CWnd::GetFocus() == this))
+    {
+      if ((SendMessage(WM_QUERYUISTATE) & UISF_HIDEFOCUS) == 0)
+      {
+        dc.SetTextColor(dark->GetColour(DarkMode::Fore));
+        dc.SetBkColor(dark->GetColour(DarkMode::Back));
+        itemR.left -= 2;
+        dc.DrawFocusRect(itemR);
+      }
+    }
+
+    dc.SelectObject(oldFont);
+    dc.SelectObject(oldPen);
   }
+  else
+    Default();
+}
+
+BEGIN_MESSAGE_MAP(DarkModeGroupBox, CButton)
+  ON_WM_PAINT()
+END_MESSAGE_MAP()
+
+void DarkModeGroupBox::OnPaint()
+{
+  DarkMode* dark = DarkMode::GetActive(this);
+  if (dark)
+  {
+    CRect r;
+    GetClientRect(r);
+    CPaintDC dc(this);
+
+    CFont* oldFont = dc.SelectObject(GetFont());
+    TEXTMETRIC metrics;
+    dc.GetTextMetrics(&metrics);
+
+    r.top += metrics.tmHeight/2;
+    dark->DrawBorder(&dc,r,DarkMode::Dark1,DarkMode::No_Colour);
+    r.top -= metrics.tmHeight/2;
+
+    CString label;
+    GetWindowText(label);
+    label.Insert(0,' ');
+    label.AppendChar(' ');
+    r.left += metrics.tmAveCharWidth;
+    dc.SetTextColor(dark->GetColour(DarkMode::Fore));
+    dc.SetBkColor(dark->GetColour(DarkMode::Back));
+    dc.SetBkMode(OPAQUE);
+    GetParent()->SendMessage(WM_CTLCOLORSTATIC,(WPARAM)dc.GetSafeHdc(),(LPARAM)GetSafeHwnd());
+    dc.DrawText(label,r,DT_LEFT|DT_TOP|DT_HIDEPREFIX|DT_SINGLELINE);
+
+    dc.SelectObject(oldFont);
+  }
+  else
+    Default();
 }
 
 BEGIN_MESSAGE_MAP(DarkModeProgressCtrl, CProgressCtrl)
@@ -352,23 +495,19 @@ void DarkModeRadioButton::OnCustomDraw(NMHDR* nmhdr, LRESULT* result)
 
         // Get the colours for drawing
         DarkMode::DarkColour back = DarkMode::No_Colour;
-        DarkMode::DarkColour fore = DarkMode::Fore;
+        DarkMode::DarkColour fore = DarkMode::Dark1;
         if (nmcd->uItemState & CDIS_HOT)
-          back = DarkMode::Dark2;
+          fore = DarkMode::Fore;
         if (nmcd->uItemState & CDIS_SELECTED)
         {
-          fore = DarkMode::Dark1;
+          fore = DarkMode::Fore;
           back = DarkMode::Dark3;
         }
 
         // Draw the border and background of the button
-        CBrush* oldBrush = dc->SelectObject(dark->GetBrush(back));
-        CPen borderPen;
-        borderPen.CreatePen(PS_SOLID,1,dark->GetColour(DarkMode::Fore));
-        CPen* oldPen = dc->SelectObject(&borderPen);
         CRect btnR(r.TopLeft(),CSize(btnSize,btnSize));
         btnR.OffsetRect(0,y);
-        dc->Rectangle(btnR);
+        dark->DrawBorder(dc,btnR,fore,back);
 
         // Draw the button center, if needed
         if (GetCheck() == BST_CHECKED)
@@ -385,6 +524,7 @@ void DarkModeRadioButton::OnCustomDraw(NMHDR* nmhdr, LRESULT* result)
         CRect textR(r);
         textR.OffsetRect((3*btnSize)/2,y);
         UINT dtFlags = DT_LEFT|DT_TOP|DT_HIDEPREFIX;
+        CFont* oldFont = dc->SelectObject(GetFont());
         dc->DrawText(label,textR,dtFlags);
 
         // Draw the focus rectangle, if needed
@@ -400,8 +540,7 @@ void DarkModeRadioButton::OnCustomDraw(NMHDR* nmhdr, LRESULT* result)
           }
         }
 
-        dc->SelectObject(oldPen);
-        dc->SelectObject(oldBrush);
+        dc->SelectObject(oldFont);
       }
       break;
     }
@@ -446,11 +585,7 @@ void DarkModeSliderCtrl::OnCustomDraw(NMHDR* nmhdr, LRESULT* result)
             else
             {
               // Is the mouse over the thumb?
-              CRect scrR(r);
-              ClientToScreen(scrR);
-              CPoint cursor;
-              ::GetCursorPos(&cursor);
-              if (scrR.PtInRect(cursor))
+              if (dark->CursorInRect(this,r))
                 thumb = DarkMode::Dark1;
             }
             dc->FillSolidRect(r,dark->GetColour(thumb));
@@ -472,8 +607,25 @@ BOOL DarkModeSliderCtrl::OnEraseBkgnd(CDC* pDC)
 }
 
 BEGIN_MESSAGE_MAP(DarkModeToolBar, CToolBar)
+  ON_WM_CTLCOLOR()
   ON_NOTIFY_REFLECT(NM_CUSTOMDRAW, OnCustomDraw)
 END_MESSAGE_MAP()
+
+HBRUSH DarkModeToolBar::OnCtlColor(CDC* pDC, CWnd* pWnd, UINT nCtlColor)
+{
+  HBRUSH brush = CToolBar::OnCtlColor(pDC,pWnd,nCtlColor);
+  if (nCtlColor == CTLCOLOR_LISTBOX)
+  {
+    // For the dropdown list of any combo boxes created as children of this toolbar
+    DarkMode* dark = DarkMode::GetActive(this);
+    if (dark)
+    {
+      brush = *(dark->GetBrush(DarkMode::Darkest));
+      pDC->SetTextColor(dark->GetColour(DarkMode::Fore));
+    }
+  }
+  return brush;
+}
 
 void DarkModeToolBar::OnCustomDraw(NMHDR* nmhdr, LRESULT* result)
 {
