@@ -242,11 +242,9 @@ void DarkModeCheckButton::OnCustomDraw(NMHDR* nmhdr, LRESULT* result)
     case CDDS_PREPAINT:
       *result = CDRF_SKIPDEFAULT;
       {
-        // Get the the size of the check box from the font height
-        TEXTMETRIC metrics;
-        dc->GetTextMetrics(&metrics);
-        int btnSize = metrics.tmHeight;
-        int y = r.Height()-btnSize;
+        // Get the the size of the check box
+        int btnSize = m_impl->check.Size().cy + (2*DarkModeCheckBorder);
+        int btnY = (r.Height()-btnSize)/2;
 
         // Get the colours for drawing
         DarkMode::DarkColour back = DarkMode::No_Colour;
@@ -261,7 +259,7 @@ void DarkModeCheckButton::OnCustomDraw(NMHDR* nmhdr, LRESULT* result)
 
         // Draw the border and background of the button
         CRect btnR(r.TopLeft(),CSize(btnSize,btnSize));
-        btnR.OffsetRect(0,y);
+        btnR.OffsetRect(0,btnY);
         dark->DrawBorder(dc,btnR,fore,back);
 
         // Draw the check, if needed
@@ -274,15 +272,20 @@ void DarkModeCheckButton::OnCustomDraw(NMHDR* nmhdr, LRESULT* result)
           image.Draw(dc,r.TopLeft()+CPoint(DarkModeCheckBorder,DarkModeCheckBorder));
         }
 
+        // Get the bounding rectangle for the label
+        CFont* oldFont = dc->SelectObject(GetFont());
+        TEXTMETRIC metrics;
+        dc->GetTextMetrics(&metrics);
+        int textY = (r.Height()-metrics.tmHeight)/2;
+        CRect textR(r);
+        textR.OffsetRect((3*btnSize)/2,textY);
+
         // Draw the label
         CString label;
         GetWindowText(label);
         dc->SetTextColor(dark->GetColour(DarkMode::Fore));
         dc->SetBkMode(TRANSPARENT);
-        CRect textR(r);
-        textR.OffsetRect((3*btnSize)/2,y);
         UINT dtFlags = DT_LEFT|DT_TOP|DT_HIDEPREFIX;
-        CFont* oldFont = dc->SelectObject(GetFont());
         dc->DrawText(label,textR,dtFlags);
 
         // Draw the focus rectangle, if needed
@@ -470,6 +473,79 @@ BEGIN_MESSAGE_MAP(DarkModeRadioButton, CButton)
   ON_NOTIFY_REFLECT(NM_CUSTOMDRAW, OnCustomDraw)
 END_MESSAGE_MAP()
 
+struct DarkModeRadioButton::Impl
+{
+  ImagePNG radio;
+
+  void DrawRadio(ImagePNG& image, int radioIndex, COLORREF colour)
+  {
+    BYTE r = GetRValue(colour);
+    BYTE g = GetGValue(colour);
+    BYTE b = GetBValue(colour);
+
+    CSize sz = image.Size();
+    for (int y = 0; y < sz.cy; y++)
+    {
+      for (int x = 0; x < sz.cx; x++)
+      {
+        BYTE* dest = image.Pixels() + (((y*sz.cx) + x) * sizeof(DWORD));
+        BYTE* src = radio.Pixels() + (((y*radio.Size().cx) + x + (radioIndex*sz.cx)) * sizeof(DWORD));
+
+        BYTE a = src[3];
+        switch (a)
+        {
+        case 0x00:
+          break;
+        case 0xff:
+          dest[0] = b;
+          dest[1] = g;
+          dest[2] = r;
+          break;
+        default:
+          dest[0] = ((b*a)+(dest[0]*(0xff-a)))>>8;
+          dest[1] = ((g*a)+(dest[1]*(0xff-a)))>>8;
+          dest[2] = ((r*a)+(dest[2]*(0xff-a)))>>8;
+          break;
+        }
+        dest[3] = 0xff;
+      }
+    }
+  }
+};
+
+DarkModeRadioButton::DarkModeRadioButton()
+{
+  m_impl = new Impl;
+}
+
+DarkModeRadioButton::~DarkModeRadioButton()
+{
+  delete m_impl;
+}
+
+BOOL DarkModeRadioButton::SubclassDlgItem(UINT id, CWnd* parent, UINT imageId)
+{
+  if (CWnd::SubclassDlgItem(id,parent))
+  {
+    ImagePNG img;
+    if (img.LoadResource(imageId))
+    {
+      // Get the the size of the radio button image from the font height
+      CDC* dc = GetDC();
+      CFont* oldFont = dc->SelectObject(GetFont());
+      TEXTMETRIC metrics;
+      dc->GetTextMetrics(&metrics);
+      dc->SelectObject(oldFont);
+      ReleaseDC(dc);
+      int imgSize = metrics.tmHeight;
+
+      m_impl->radio.Scale(img,CSize(3*imgSize,imgSize));
+      return TRUE;
+    }
+  }
+  return FALSE;
+}
+
 void DarkModeRadioButton::OnCustomDraw(NMHDR* nmhdr, LRESULT* result)
 {
   NMCUSTOMDRAW* nmcd = (NMCUSTOMDRAW*)nmhdr;
@@ -487,11 +563,9 @@ void DarkModeRadioButton::OnCustomDraw(NMHDR* nmhdr, LRESULT* result)
     case CDDS_PREPAINT:
       *result = CDRF_SKIPDEFAULT;
       {
-        // Get the the size of the radio button from the font height
-        TEXTMETRIC metrics;
-        dc->GetTextMetrics(&metrics);
-        int btnSize = metrics.tmHeight;
-        int y = r.Height()-btnSize;
+        // Get the the size of the radio button
+        int btnSize = m_impl->radio.Size().cy;
+        int btnY = (r.Height()-btnSize)/2;
 
         // Get the colours for drawing
         DarkMode::DarkColour back = DarkMode::No_Colour;
@@ -504,27 +578,36 @@ void DarkModeRadioButton::OnCustomDraw(NMHDR* nmhdr, LRESULT* result)
           back = DarkMode::Dark3;
         }
 
-        // Draw the border and background of the button
+        // Prepare the image for the radio button
         CRect btnR(r.TopLeft(),CSize(btnSize,btnSize));
-        btnR.OffsetRect(0,y);
-        dark->DrawBorder(dc,btnR,fore,back);
+        btnR.OffsetRect(0,btnY);
+        ImagePNG image;
+        image.Create(btnR.Size());
+        image.Blend(dark->GetColour(DarkMode::Back));
 
-        // Draw the button center, if needed
+        // Draw the radio button
+        m_impl->DrawRadio(image,1,dark->GetColour(back));
+        m_impl->DrawRadio(image,0,dark->GetColour(fore));
         if (GetCheck() == BST_CHECKED)
-        {
-          btnR.DeflateRect(5,5);
-          dc->FillSolidRect(btnR,dark->GetColour(fore));
-        }
+          m_impl->DrawRadio(image,2,dark->GetColour(fore));
+
+        // Draw the radio button into the window
+        image.Draw(dc,btnR.TopLeft());
+
+        // Get the bounding rectangle for the label
+        CFont* oldFont = dc->SelectObject(GetFont());
+        TEXTMETRIC metrics;
+        dc->GetTextMetrics(&metrics);
+        int textY = (r.Height()-metrics.tmHeight)/2;
+        CRect textR(r);
+        textR.OffsetRect((3*btnSize)/2,textY);
 
         // Draw the label
         CString label;
         GetWindowText(label);
         dc->SetTextColor(dark->GetColour(DarkMode::Fore));
         dc->SetBkMode(TRANSPARENT);
-        CRect textR(r);
-        textR.OffsetRect((3*btnSize)/2,y);
         UINT dtFlags = DT_LEFT|DT_TOP|DT_HIDEPREFIX;
-        CFont* oldFont = dc->SelectObject(GetFont());
         dc->DrawText(label,textR,dtFlags);
 
         // Draw the focus rectangle, if needed

@@ -76,6 +76,15 @@ void ImagePNG::Clear(void)
   m_aspect = 1.0;
 }
 
+void ImagePNG::Create(const CSize& size)
+{
+  Clear();
+
+  m_size = size;
+  m_pixels = new BYTE[m_size.cx*m_size.cy*sizeof(DWORD)];
+  memset(m_pixels,0,m_size.cx*m_size.cy*sizeof(DWORD));
+}
+
 void ImagePNG::Copy(const ImagePNG& from)
 {
   Clear();

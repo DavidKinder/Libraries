@@ -58,7 +58,6 @@ protected:
   afx_msg void OnCustomDraw(NMHDR*, LRESULT*);
   DECLARE_MESSAGE_MAP()
 
-private:
   struct Impl;
   Impl* m_impl;
 };
@@ -97,9 +96,18 @@ protected:
 
 class DarkModeRadioButton : public CButton
 {
+public:
+  DarkModeRadioButton();
+  ~DarkModeRadioButton();
+
+  BOOL SubclassDlgItem(UINT id, CWnd* parent, UINT imageId);
+
 protected:
   afx_msg void OnCustomDraw(NMHDR*, LRESULT*);
   DECLARE_MESSAGE_MAP()
+
+  struct Impl;
+  Impl* m_impl;
 };
 
 class DarkModeSliderCtrl : public CSliderCtrl
