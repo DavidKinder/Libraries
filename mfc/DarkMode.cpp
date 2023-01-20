@@ -19,8 +19,17 @@ DarkMode::DarkMode()
 
 DarkMode* DarkMode::GetEnabled(void)
 {
-  if (false) // Enabled in Windows!
-    return new DarkMode();
+  CRegKey key;
+  LPCSTR path = "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize";
+  if (key.Open(HKEY_CURRENT_USER,path,KEY_READ) == ERROR_SUCCESS)
+  {
+    DWORD theme = 0;
+    if (key.QueryDWORDValue("AppsUseLightTheme",theme) == ERROR_SUCCESS)
+    {
+      if (theme == 0)
+        return new DarkMode();
+    }
+  }
   return NULL;
 }
 
