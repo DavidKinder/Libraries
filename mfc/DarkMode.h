@@ -7,6 +7,7 @@ class DarkMode
 public:
   DarkMode();
 
+  static bool IsEnabled(void);
   static DarkMode* GetEnabled(void);
   static DarkMode* GetActive(CWnd* wnd);
 

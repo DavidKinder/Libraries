@@ -17,7 +17,7 @@ DarkMode::DarkMode()
   m_colours[No_Colour] = 0;
 }
 
-DarkMode* DarkMode::GetEnabled(void)
+bool DarkMode::IsEnabled(void)
 {
   CRegKey key;
   LPCSTR path = "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize";
@@ -27,15 +27,23 @@ DarkMode* DarkMode::GetEnabled(void)
     if (key.QueryDWORDValue("AppsUseLightTheme",theme) == ERROR_SUCCESS)
     {
       if (theme == 0)
-        return new DarkMode();
+        return true;
     }
   }
+  return false;
+}
+
+DarkMode* DarkMode::GetEnabled(void)
+{
+  if (IsEnabled())
+    return new DarkMode();
   return NULL;
 }
 
 DarkMode* DarkMode::GetActive(CWnd* wnd)
 {
-  return (DarkMode*)wnd->GetParentFrame()->SendMessage(WM_DARKMODE_ACTIVE);
+  CWnd* frame = wnd->IsFrameWnd() ? wnd : wnd->GetParentFrame();
+  return (DarkMode*)frame->SendMessage(WM_DARKMODE_ACTIVE);
 }
 
 void DarkMode::Set(CFrameWnd* frame, DarkMode* dark)
