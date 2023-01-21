@@ -123,6 +123,7 @@ protected:
   afx_msg int OnCreate(LPCREATESTRUCT lpCreateStruct);
   afx_msg void OnMenuSelect(UINT, UINT, HMENU);
   afx_msg void OnSettingChange(UINT, LPCTSTR);
+  afx_msg BOOL OnToolTipText(UINT nID, NMHDR* pNMHDR, LRESULT* pResult);
   afx_msg LRESULT OnDarkModeActive(WPARAM, LPARAM);
   DECLARE_MESSAGE_MAP()
 

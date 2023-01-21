@@ -14,6 +14,7 @@ public:
   static void Set(CFrameWnd* frame, DarkMode* dark);
   static void Set(CReBar* bar, DarkMode* dark);
   static void Set(CControlBar* bar, CReBar* rebar, int index, DarkMode* dark);
+  static void Set(CToolTipCtrl* tip, DarkMode* dark);
 
   enum DarkColour
   {

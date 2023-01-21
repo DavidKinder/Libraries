@@ -930,6 +930,8 @@ BEGIN_MESSAGE_MAP(MenuBarFrameWnd, CFrameWnd)
   ON_WM_MEASUREITEM()
   ON_WM_DRAWITEM()
   ON_WM_SETTINGCHANGE()
+  ON_NOTIFY_EX_RANGE(TTN_NEEDTEXTW, 0, 0xFFFF, OnToolTipText)
+  ON_NOTIFY_EX_RANGE(TTN_NEEDTEXTA, 0, 0xFFFF, OnToolTipText)
   ON_MESSAGE(WM_DARKMODE_ACTIVE, OnDarkModeActive)
 END_MESSAGE_MAP()
 
@@ -1027,6 +1029,18 @@ void MenuBarFrameWnd::OnSettingChange(UINT uiAction, LPCTSTR lpszSection)
   int dpi = DPI::getWindowDPI(this);
   if (m_settings != Settings(dpi))
     UpdateDPI(dpi);
+}
+
+BOOL MenuBarFrameWnd::OnToolTipText(UINT nID, NMHDR* pNMHDR, LRESULT* pResult)
+{
+  if (CFrameWnd::OnToolTipText(nID,pNMHDR,pResult))
+  {
+    CWnd* wnd = CWnd::FromHandle(pNMHDR->hwndFrom);
+    if (wnd && wnd->IsKindOf(RUNTIME_CLASS(CToolTipCtrl)))
+      DarkMode::Set((CToolTipCtrl*)wnd,DarkMode::GetActive(this));
+    return TRUE;
+  }
+  return FALSE;
 }
 
 LRESULT MenuBarFrameWnd::OnDarkModeActive(WPARAM, LPARAM)

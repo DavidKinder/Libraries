@@ -81,6 +81,26 @@ void DarkMode::Set(CControlBar* bar, CReBar* rebar, int index, DarkMode* dark)
   }
 }
 
+void DarkMode::Set(CToolTipCtrl* tip, DarkMode* dark)
+{
+  HTHEME theme = ::GetWindowTheme(tip->GetSafeHwnd());
+
+  if (dark)
+  {
+    // Remove any theme and set the colours
+    if (theme != 0)
+      ::SetWindowTheme(tip->GetSafeHwnd(),L"",L"");
+    tip->SetTipBkColor(dark->GetColour(DarkMode::Dark3));
+    tip->SetTipTextColor(dark->GetColour(DarkMode::Fore));
+  }
+  else
+  {
+    // Set the theme back, if needed
+    if (theme == 0)
+      ::SetWindowTheme(tip->GetSafeHwnd(),NULL,NULL);
+  }
+}
+
 COLORREF DarkMode::GetColour(DarkColour colour)
 {
   ASSERT(colour >= 0);
