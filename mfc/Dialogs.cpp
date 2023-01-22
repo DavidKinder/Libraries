@@ -175,6 +175,50 @@ void BaseDialog::SetFont(CDialogTemplate& dlgTemplate)
   dlgTemplate.SetFont(ncm.lfMessageFont.lfFaceName,fontSize);
 }
 
+BEGIN_MESSAGE_MAP(BaseDialog, CDialog)
+  ON_WM_CTLCOLOR()
+  ON_WM_ERASEBKGND()
+END_MESSAGE_MAP()
+
+HBRUSH BaseDialog::OnCtlColor(CDC* pDC, CWnd* pWnd, UINT nCtlColor)
+{
+  HBRUSH brush = CDialog::OnCtlColor(pDC,pWnd,nCtlColor);
+  DarkMode* dark = DarkMode::GetActive(this);
+
+  switch (nCtlColor)
+  {
+  case CTLCOLOR_STATIC:
+    if (dark)
+    {
+      brush = *(dark->GetBrush(DarkMode::Darkest));
+      pDC->SetBkColor(dark->GetColour(DarkMode::Darkest));
+      pDC->SetTextColor(dark->GetColour(DarkMode::Fore));
+    }
+    break;
+  case CTLCOLOR_LISTBOX: // For combo box dropdown lists
+    if (dark)
+    {
+      brush = *(dark->GetBrush(DarkMode::Darkest));
+      pDC->SetTextColor(dark->GetColour(DarkMode::Fore));
+    }
+    break;
+  }
+  return brush;
+}
+
+BOOL BaseDialog::OnEraseBkgnd(CDC* dc)
+{
+  DarkMode* dark = DarkMode::GetActive(this);
+  if (dark)
+  {
+    CRect r;
+    GetClientRect(r);
+    dc->FillSolidRect(r,dark->GetColour(DarkMode::Darkest));
+    return TRUE;
+  }
+  return FALSE;
+}
+
 GetFontDialog::GetFontDialog(LOGFONT& logFont, UINT templateId, CWnd* parent)
   : BaseDialog(templateId,parent), m_logFont(logFont)
 {
