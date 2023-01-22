@@ -235,6 +235,7 @@ END_MESSAGE_MAP()
 
 struct DarkModeCheckButton::Impl
 {
+  DarkMode::DarkColour back = DarkMode::Back;
   ImagePNG check;
 };
 
@@ -250,10 +251,12 @@ DarkModeCheckButton::~DarkModeCheckButton()
   delete m_impl;
 }
 
-BOOL DarkModeCheckButton::SubclassDlgItem(UINT id, CWnd* parent, UINT imageId)
+BOOL DarkModeCheckButton::SubclassDlgItem(UINT id, CWnd* parent, UINT imageId, DarkMode::DarkColour back)
 {
   if (CWnd::SubclassDlgItem(id,parent))
   {
+    m_impl->back = back;
+
     ImagePNG img;
     if (img.LoadResource(imageId))
     {
@@ -295,7 +298,7 @@ void DarkModeCheckButton::OnCustomDraw(NMHDR* nmhdr, LRESULT* result)
         int btnY = (r.Height()-btnSize)/2;
 
         // Get the colours for drawing
-        DarkMode::DarkColour back = DarkMode::No_Colour;
+        DarkMode::DarkColour back = m_impl->back;
         DarkMode::DarkColour fore = DarkMode::Dark1;
         if (nmcd->uItemState & CDIS_HOT)
           fore = DarkMode::Fore;
@@ -317,7 +320,7 @@ void DarkModeCheckButton::OnCustomDraw(NMHDR* nmhdr, LRESULT* result)
           image.Copy(m_impl->check);
           image.Fill(dark->GetColour(fore));
           image.Blend(dark->GetColour(back));
-          image.Draw(dc,r.TopLeft()+CPoint(DarkModeCheckBorder,DarkModeCheckBorder));
+          image.Draw(dc,btnR.TopLeft()+CPoint(DarkModeCheckBorder,DarkModeCheckBorder));
         }
 
         // Get the bounding rectangle for the label
@@ -523,6 +526,7 @@ END_MESSAGE_MAP()
 
 struct DarkModeRadioButton::Impl
 {
+  DarkMode::DarkColour back = DarkMode::Back;
   ImagePNG radio;
 
   void DrawRadio(ImagePNG& image, int radioIndex, COLORREF colour)
@@ -571,10 +575,12 @@ DarkModeRadioButton::~DarkModeRadioButton()
   delete m_impl;
 }
 
-BOOL DarkModeRadioButton::SubclassDlgItem(UINT id, CWnd* parent, UINT imageId)
+BOOL DarkModeRadioButton::SubclassDlgItem(UINT id, CWnd* parent, UINT imageId, DarkMode::DarkColour back)
 {
   if (CWnd::SubclassDlgItem(id,parent))
   {
+    m_impl->back = back;
+
     ImagePNG img;
     if (img.LoadResource(imageId))
     {
@@ -616,7 +622,7 @@ void DarkModeRadioButton::OnCustomDraw(NMHDR* nmhdr, LRESULT* result)
         int btnY = (r.Height()-btnSize)/2;
 
         // Get the colours for drawing
-        DarkMode::DarkColour back = DarkMode::No_Colour;
+        DarkMode::DarkColour back = m_impl->back;
         DarkMode::DarkColour fore = DarkMode::Dark1;
         if (nmcd->uItemState & CDIS_HOT)
           fore = DarkMode::Fore;

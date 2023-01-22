@@ -55,7 +55,7 @@ public:
   DarkModeCheckButton();
   ~DarkModeCheckButton();
 
-  BOOL SubclassDlgItem(UINT id, CWnd* parent, UINT imageId);
+  BOOL SubclassDlgItem(UINT id, CWnd* parent, UINT imageId, DarkMode::DarkColour back);
 
 protected:
   afx_msg void OnCustomDraw(NMHDR*, LRESULT*);
@@ -103,7 +103,7 @@ public:
   DarkModeRadioButton();
   ~DarkModeRadioButton();
 
-  BOOL SubclassDlgItem(UINT id, CWnd* parent, UINT imageId);
+  BOOL SubclassDlgItem(UINT id, CWnd* parent, UINT imageId, DarkMode::DarkColour back);
 
 protected:
   afx_msg void OnCustomDraw(NMHDR*, LRESULT*);
