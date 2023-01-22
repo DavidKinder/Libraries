@@ -208,12 +208,15 @@ HBRUSH BaseDialog::OnCtlColor(CDC* pDC, CWnd* pWnd, UINT nCtlColor)
 
 BOOL BaseDialog::OnEraseBkgnd(CDC* dc)
 {
-  DarkMode* dark = DarkMode::GetActive(this);
-  if (dark)
+  if (CDialog::OnEraseBkgnd(dc))
   {
-    CRect r;
-    GetClientRect(r);
-    dc->FillSolidRect(r,dark->GetColour(DarkMode::Darkest));
+    DarkMode* dark = DarkMode::GetActive(this);
+    if (dark)
+    {
+      CRect r;
+      GetClientRect(r);
+      dc->FillSolidRect(r,dark->GetColour(DarkMode::Darkest));
+    }
     return TRUE;
   }
   return FALSE;
