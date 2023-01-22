@@ -57,6 +57,17 @@ void DarkMode::Set(CFrameWnd* frame, DarkMode* dark)
   frame->Invalidate();
 }
 
+void DarkMode::Set(CDialog* dlg, DarkMode* dark)
+{
+  if (dark)
+  {
+    BOOL darkTitle = TRUE;
+    ::DwmSetWindowAttribute(dlg->GetSafeHwnd(),DWMWA_USE_IMMERSIVE_DARK_MODE,&darkTitle,sizeof darkTitle);
+  }
+
+  dlg->Invalidate();
+}
+
 void DarkMode::Set(CReBar* rebar, DarkMode* dark)
 {
   LPCWSTR theme = dark ? L"" : NULL;

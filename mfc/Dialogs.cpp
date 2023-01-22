@@ -1,5 +1,7 @@
 #include "stdafx.h"
 #include "Dialogs.h"
+#include "DarkMode.h"
+
 #pragma warning(disable : 4996) // Ignore deprecation warning
 
 IMPLEMENT_DYNAMIC(BaseDialog, CDialog)
@@ -153,6 +155,8 @@ BOOL BaseDialog::CreateDlgIndirect(LPCDLGTEMPLATE lpDialogTemplate, CWnd* pParen
 
   if (hWnd == NULL)
     return FALSE;
+
+  DarkMode::Set(this,DarkMode::GetActive(pParentWnd));
   return TRUE;
 }
 
