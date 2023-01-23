@@ -21,7 +21,6 @@ protected:
   DECLARE_MESSAGE_MAP()
 
   afx_msg HBRUSH OnCtlColor(CDC* pDC, CWnd* pWnd, UINT nCtlColor);
-  afx_msg BOOL OnEraseBkgnd(CDC* pDC);
 };
 
 class GetFontDialog : public BaseDialog

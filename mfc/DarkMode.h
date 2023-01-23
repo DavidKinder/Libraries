@@ -80,10 +80,26 @@ protected:
   DarkMode::DarkColour m_activeBorder = DarkMode::Fore;
 };
 
+class DarkModeEdit : public CEdit
+{
+  DECLARE_DYNAMIC(DarkModeEdit)
+
+protected:
+  afx_msg void OnNcPaint();
+  DECLARE_MESSAGE_MAP()
+};
+
 class DarkModeGroupBox : public CButton
 {
 protected:
   afx_msg void OnPaint();
+  DECLARE_MESSAGE_MAP()
+};
+
+class DarkModeListBox : public CListBox
+{
+protected:
+  afx_msg void OnNcPaint();
   DECLARE_MESSAGE_MAP()
 };
 

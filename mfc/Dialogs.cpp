@@ -177,7 +177,6 @@ void BaseDialog::SetFont(CDialogTemplate& dlgTemplate)
 
 BEGIN_MESSAGE_MAP(BaseDialog, CDialog)
   ON_WM_CTLCOLOR()
-  ON_WM_ERASEBKGND()
 END_MESSAGE_MAP()
 
 HBRUSH BaseDialog::OnCtlColor(CDC* pDC, CWnd* pWnd, UINT nCtlColor)
@@ -187,7 +186,9 @@ HBRUSH BaseDialog::OnCtlColor(CDC* pDC, CWnd* pWnd, UINT nCtlColor)
 
   switch (nCtlColor)
   {
+  case CTLCOLOR_DLG:
   case CTLCOLOR_STATIC:
+  case CTLCOLOR_EDIT:
     if (dark)
     {
       brush = *(dark->GetBrush(DarkMode::Darkest));
@@ -204,22 +205,6 @@ HBRUSH BaseDialog::OnCtlColor(CDC* pDC, CWnd* pWnd, UINT nCtlColor)
     break;
   }
   return brush;
-}
-
-BOOL BaseDialog::OnEraseBkgnd(CDC* dc)
-{
-  if (CDialog::OnEraseBkgnd(dc))
-  {
-    DarkMode* dark = DarkMode::GetActive(this);
-    if (dark)
-    {
-      CRect r;
-      GetClientRect(r);
-      dc->FillSolidRect(r,dark->GetColour(DarkMode::Darkest));
-    }
-    return TRUE;
-  }
-  return FALSE;
 }
 
 GetFontDialog::GetFontDialog(LOGFONT& logFont, UINT templateId, CWnd* parent)

@@ -188,6 +188,8 @@ bool DarkMode::CursorInRect(CWnd* wnd, CRect r)
   return r.PtInRect(cursor);
 }
 
+// Dark mode controls: DarkModeButton
+
 BEGIN_MESSAGE_MAP(DarkModeButton, CButton)
   ON_NOTIFY_REFLECT(NM_CUSTOMDRAW, OnCustomDraw)
 END_MESSAGE_MAP()
@@ -254,6 +256,8 @@ void DarkModeButton::OnCustomDraw(NMHDR* nmhdr, LRESULT* result)
     }
   }
 }
+
+// Dark mode controls: DarkModeCheckButton
 
 BEGIN_MESSAGE_MAP(DarkModeCheckButton, CButton)
   ON_NOTIFY_REFLECT(NM_CUSTOMDRAW, OnCustomDraw)
@@ -388,6 +392,8 @@ void DarkModeCheckButton::OnCustomDraw(NMHDR* nmhdr, LRESULT* result)
   }
 }
 
+// Dark mode controls: DarkModeComboBox
+
 BEGIN_MESSAGE_MAP(DarkModeComboBox, CComboBox)
   ON_WM_PAINT()
 END_MESSAGE_MAP()
@@ -486,6 +492,29 @@ void DarkModeComboBox::OnPaint()
     Default();
 }
 
+// Dark mode controls: DarkModeEdit
+
+IMPLEMENT_DYNAMIC(DarkModeEdit, CEdit)
+
+BEGIN_MESSAGE_MAP(DarkModeEdit, CEdit)
+  ON_WM_NCPAINT()
+END_MESSAGE_MAP()
+
+void DarkModeEdit::OnNcPaint()
+{
+  DarkMode* dark = DarkMode::GetActive(this);
+  if (dark)
+  {
+    DarkMode::DarkColour border =
+      (CWnd::GetFocus() == this) ? DarkMode::Dark1 : DarkMode::Dark2;
+    dark->DrawNonClientBorder(this,border,DarkMode::Darkest);
+  }
+  else
+    Default();
+}
+
+// Dark mode controls: DarkModeGroupBox
+
 BEGIN_MESSAGE_MAP(DarkModeGroupBox, CButton)
   ON_WM_PAINT()
 END_MESSAGE_MAP()
@@ -504,7 +533,7 @@ void DarkModeGroupBox::OnPaint()
     dc.GetTextMetrics(&metrics);
 
     r.top += metrics.tmHeight/2;
-    dark->DrawBorder(&dc,r,DarkMode::Dark1,DarkMode::No_Colour);
+    dark->DrawBorder(&dc,r,DarkMode::Dark2,DarkMode::No_Colour);
     r.top -= metrics.tmHeight/2;
 
     CString label;
@@ -523,6 +552,27 @@ void DarkModeGroupBox::OnPaint()
   else
     Default();
 }
+
+// Dark mode controls: DarkModeListBox
+
+BEGIN_MESSAGE_MAP(DarkModeListBox, CListBox)
+  ON_WM_NCPAINT()
+END_MESSAGE_MAP()
+
+void DarkModeListBox::OnNcPaint()
+{
+  DarkMode* dark = DarkMode::GetActive(this);
+  if (dark)
+  {
+    DarkMode::DarkColour border =
+      (CWnd::GetFocus() == this) ? DarkMode::Dark1 : DarkMode::Dark2;
+    dark->DrawNonClientBorder(this,border,DarkMode::Darkest);
+  }
+  else
+    Default();
+}
+
+// Dark mode controls: DarkModeProgressCtrl
 
 BEGIN_MESSAGE_MAP(DarkModeProgressCtrl, CProgressCtrl)
   ON_WM_NCPAINT()
@@ -548,6 +598,8 @@ void DarkModeProgressCtrl::OnNcPaint()
   else
     Default();
 }
+
+// Dark mode controls: DarkModeRadioButton
 
 BEGIN_MESSAGE_MAP(DarkModeRadioButton, CButton)
   ON_NOTIFY_REFLECT(NM_CUSTOMDRAW, OnCustomDraw)
@@ -716,6 +768,8 @@ void DarkModeRadioButton::OnCustomDraw(NMHDR* nmhdr, LRESULT* result)
   }
 }
 
+// Dark mode controls: DarkModeSliderCtrl
+
 BEGIN_MESSAGE_MAP(DarkModeSliderCtrl, CSliderCtrl)
   ON_NOTIFY_REFLECT(NM_CUSTOMDRAW, OnCustomDraw)
   ON_WM_ERASEBKGND()
@@ -774,6 +828,8 @@ BOOL DarkModeSliderCtrl::OnEraseBkgnd(CDC* pDC)
 {
   return TRUE;
 }
+
+// Dark mode controls: DarkModeToolBar
 
 BEGIN_MESSAGE_MAP(DarkModeToolBar, CToolBar)
   ON_WM_CTLCOLOR()
