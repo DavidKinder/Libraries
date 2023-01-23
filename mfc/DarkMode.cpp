@@ -19,6 +19,14 @@ DarkMode::DarkMode()
 
 bool DarkMode::IsEnabled(void)
 {
+  // No dark mode if high contrast is active
+  HIGHCONTRAST contrast = { sizeof(contrast), 0 };
+  if (::SystemParametersInfo(SPI_GETHIGHCONTRAST,sizeof(contrast),&contrast,FALSE))
+  {
+    if (contrast.dwFlags & HCF_HIGHCONTRASTON)
+      return false;
+  }
+
   CRegKey key;
   LPCSTR path = "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize";
   if (key.Open(HKEY_CURRENT_USER,path,KEY_READ) == ERROR_SUCCESS)
@@ -30,6 +38,7 @@ bool DarkMode::IsEnabled(void)
         return true;
     }
   }
+
   return false;
 }
 
