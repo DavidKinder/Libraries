@@ -57,24 +57,16 @@ DarkMode* DarkMode::GetActive(CWnd* wnd)
 
 void DarkMode::Set(CFrameWnd* frame, DarkMode* dark)
 {
-  if (dark)
-  {
-    BOOL darkTitle = TRUE;
-    ::DwmSetWindowAttribute(frame->GetSafeHwnd(),DWMWA_USE_IMMERSIVE_DARK_MODE,&darkTitle,sizeof darkTitle);
-  }
-
-  frame->Invalidate();
+  BOOL darkTitle = (dark != NULL);
+  ::DwmSetWindowAttribute(frame->GetSafeHwnd(),DWMWA_USE_IMMERSIVE_DARK_MODE,&darkTitle,sizeof darkTitle);
+  frame->RedrawWindow(NULL,NULL,RDW_ERASE|RDW_INVALIDATE|RDW_ALLCHILDREN);
 }
 
 void DarkMode::Set(CDialog* dlg, DarkMode* dark)
 {
-  if (dark)
-  {
-    BOOL darkTitle = TRUE;
-    ::DwmSetWindowAttribute(dlg->GetSafeHwnd(),DWMWA_USE_IMMERSIVE_DARK_MODE,&darkTitle,sizeof darkTitle);
-  }
-
-  dlg->Invalidate();
+  BOOL darkTitle = (dark != NULL);
+  ::DwmSetWindowAttribute(dlg->GetSafeHwnd(),DWMWA_USE_IMMERSIVE_DARK_MODE,&darkTitle,sizeof darkTitle);
+  dlg->RedrawWindow(NULL,NULL,RDW_ERASE|RDW_INVALIDATE|RDW_ALLCHILDREN);
 }
 
 void DarkMode::Set(CReBar* rebar, DarkMode* dark)
