@@ -156,8 +156,14 @@ BOOL BaseDialog::CreateDlgIndirect(LPCDLGTEMPLATE lpDialogTemplate, CWnd* pParen
   if (hWnd == NULL)
     return FALSE;
 
-  DarkMode::Set(this,DarkMode::GetActive(pParentWnd));
+  SetDarkMode(DarkMode::GetActive(pParentWnd));
   return TRUE;
+}
+
+void BaseDialog::SetDarkMode(DarkMode* dark)
+{
+  if (GetSafeHwnd() != 0)
+    DarkMode::Set(this,dark);
 }
 
 void BaseDialog::SetFont(CDialogTemplate& dlgTemplate)

@@ -2,6 +2,8 @@
 
 #include <afxpriv.h>
 
+class DarkMode;
+
 class BaseDialog : public CDialog
 {
   DECLARE_DYNAMIC(BaseDialog)
@@ -11,6 +13,8 @@ public:
 
   virtual INT_PTR DoModal();
   virtual BOOL Create(LPCTSTR lpszTemplateName, CWnd* pParentWnd = NULL);
+
+  virtual void SetDarkMode(DarkMode* dark);
 
 protected:
   BaseDialog();
