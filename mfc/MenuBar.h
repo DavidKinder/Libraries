@@ -114,7 +114,7 @@ public:
   MenuBarFrameWnd();
   virtual ~MenuBarFrameWnd();
 
-  void UpdateDPI(int dpi);
+  virtual void UpdateDPI(int dpi);
   virtual void SetDarkMode(DarkMode* dark);
 
 protected: 
