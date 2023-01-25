@@ -572,13 +572,16 @@ END_MESSAGE_MAP()
 
 void DarkModeProgressCtrl::SetDarkMode(DarkMode* dark)
 {
-  LPCWSTR theme = dark ? L"" : NULL;
-  ::SetWindowTheme(GetSafeHwnd(),theme,theme);
-
-  if (dark)
+  if (GetSafeHwnd() != 0)
   {
-    SetBkColor(dark->GetColour(DarkMode::Back));
-    SetBarColor(dark->GetColour(DarkMode::Dark1));
+    LPCWSTR theme = dark ? L"" : NULL;
+    ::SetWindowTheme(GetSafeHwnd(),theme,theme);
+
+    if (dark)
+    {
+      SetBkColor(dark->GetColour(DarkMode::Back));
+      SetBarColor(dark->GetColour(DarkMode::Dark1));
+    }
   }
 }
 
