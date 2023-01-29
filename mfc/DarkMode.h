@@ -51,6 +51,8 @@ protected:
 
 class DarkModeCheckButton : public CButton
 {
+  DECLARE_DYNAMIC(DarkModeCheckButton)
+
 public:
   DarkModeCheckButton();
   ~DarkModeCheckButton();
@@ -60,6 +62,8 @@ public:
 protected:
   afx_msg void OnCustomDraw(NMHDR*, LRESULT*);
   DECLARE_MESSAGE_MAP()
+
+  virtual bool HasFocusRect(UINT uiState);
 
   struct Impl;
   Impl* m_impl;
@@ -74,6 +78,7 @@ public:
 
 protected:
   afx_msg void OnPaint();
+  afx_msg HBRUSH OnCtlColor(CDC* pDC, CWnd* pWnd, UINT nCtlColor);
   DECLARE_MESSAGE_MAP()
 
   DarkMode::DarkColour m_border = DarkMode::Dark1;
@@ -110,6 +115,18 @@ public:
 
 protected:
   afx_msg void OnNcPaint();
+  DECLARE_MESSAGE_MAP()
+};
+
+class DarkModePropertyPage : public CPropertyPage
+{
+  DECLARE_DYNAMIC(DarkModePropertyPage)
+
+public:
+  DarkModePropertyPage(UINT id);
+
+protected:
+  afx_msg HBRUSH OnCtlColor(CDC* pDC, CWnd* pWnd, UINT nCtlColor);
   DECLARE_MESSAGE_MAP()
 };
 

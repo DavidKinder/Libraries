@@ -251,6 +251,8 @@ void DarkModeButton::OnCustomDraw(NMHDR* nmhdr, LRESULT* result)
 
 // Dark mode controls: DarkModeCheckButton
 
+IMPLEMENT_DYNAMIC(DarkModeCheckButton, CButton)
+
 BEGIN_MESSAGE_MAP(DarkModeCheckButton, CButton)
   ON_NOTIFY_REFLECT(NM_CUSTOMDRAW, OnCustomDraw)
 END_MESSAGE_MAP()
@@ -258,10 +260,9 @@ END_MESSAGE_MAP()
 struct DarkModeCheckButton::Impl
 {
   DarkMode::DarkColour back = DarkMode::Back;
+  int border = 0;
   ImagePNG check;
 };
-
-static const int DarkModeCheckBorder = 3;
 
 DarkModeCheckButton::DarkModeCheckButton()
 {
@@ -289,7 +290,8 @@ BOOL DarkModeCheckButton::SubclassDlgItem(UINT id, CWnd* parent, UINT imageId, D
       dc->GetTextMetrics(&metrics);
       dc->SelectObject(oldFont);
       ReleaseDC(dc);
-      int imgSize = metrics.tmHeight - (2*DarkModeCheckBorder);
+      m_impl->border = (metrics.tmHeight) < 20 ? 2 : 3;
+      int imgSize = metrics.tmHeight - (2 * m_impl->border);
 
       m_impl->check.Scale(img,CSize(imgSize,imgSize));
       return TRUE;
@@ -315,8 +317,10 @@ void DarkModeCheckButton::OnCustomDraw(NMHDR* nmhdr, LRESULT* result)
     case CDDS_PREPAINT:
       *result = CDRF_SKIPDEFAULT;
       {
+        dc->FillSolidRect(r,dark->GetColour(m_impl->back));
+
         // Get the the size of the check box
-        int btnSize = m_impl->check.Size().cy + (2*DarkModeCheckBorder);
+        int btnSize = m_impl->check.Size().cy + (2 * m_impl->border);
         int btnY = (r.Height()-btnSize)/2;
 
         // Get the colours for drawing
@@ -342,7 +346,7 @@ void DarkModeCheckButton::OnCustomDraw(NMHDR* nmhdr, LRESULT* result)
           image.Copy(m_impl->check);
           image.Fill(dark->GetColour(fore));
           image.Blend(dark->GetColour(back));
-          image.Draw(dc,btnR.TopLeft()+CPoint(DarkModeCheckBorder,DarkModeCheckBorder));
+          image.Draw(dc,btnR.TopLeft()+CPoint(m_impl->border,m_impl->border));
         }
 
         // Get the bounding rectangle for the label
@@ -365,16 +369,13 @@ void DarkModeCheckButton::OnCustomDraw(NMHDR* nmhdr, LRESULT* result)
         dc->DrawText(label,textR,dtFlags);
 
         // Draw the focus rectangle, if needed
-        if (CWnd::GetFocus() == this)
+        if (HasFocusRect(uiState))
         {
-          if ((uiState & UISF_HIDEFOCUS) == 0)
-          {
-            dc->DrawText(label,textR,dtFlags|DT_CALCRECT);
-            textR.InflateRect(2,0);
-            dc->SetTextColor(dark->GetColour(DarkMode::Fore));
-            dc->SetBkColor(dark->GetColour(DarkMode::Back));
-            dc->DrawFocusRect(textR);
-          }
+          dc->DrawText(label,textR,dtFlags|DT_CALCRECT);
+          textR.InflateRect(2,0);
+          dc->SetTextColor(dark->GetColour(DarkMode::Fore));
+          dc->SetBkColor(dark->GetColour(DarkMode::Back));
+          dc->DrawFocusRect(textR);
         }
 
         dc->SelectObject(oldFont);
@@ -384,10 +385,16 @@ void DarkModeCheckButton::OnCustomDraw(NMHDR* nmhdr, LRESULT* result)
   }
 }
 
+bool DarkModeCheckButton::HasFocusRect(UINT uiState)
+{
+  return (CWnd::GetFocus() == this) && ((uiState & UISF_HIDEFOCUS) == 0);
+}
+
 // Dark mode controls: DarkModeComboBox
 
 BEGIN_MESSAGE_MAP(DarkModeComboBox, CComboBox)
   ON_WM_PAINT()
+  ON_WM_CTLCOLOR()
 END_MESSAGE_MAP()
 
 void DarkModeComboBox::SetDarkBorder(DarkMode::DarkColour colour, DarkMode::DarkColour activeColour)
@@ -454,36 +461,61 @@ void DarkModeComboBox::OnPaint()
       dc.LineTo(pt.x+i+1,pt.y-i);
     }
 
-    // Draw the selected item
-    CString itemText;
-    int itemIndex = GetCurSel();
-    if (itemIndex != CB_ERR)
-      GetLBText(itemIndex,itemText);
-    dc.SetTextColor(dark->GetColour(DarkMode::Fore));
-    dc.SetBkMode(TRANSPARENT);
-    itemR.left += 2;
-    CFont* oldFont = dc.SelectObject(GetFont());
-    dc.DrawText(itemText,itemR,DT_LEFT|DT_VCENTER|DT_HIDEPREFIX|DT_END_ELLIPSIS);
-
-    // Draw the focus rectangle, if needed
-    if (!GetDroppedState() && (CWnd::GetFocus() == this))
+    if (GetStyle() & CBS_DROPDOWNLIST)
     {
-      if ((SendMessage(WM_QUERYUISTATE) & UISF_HIDEFOCUS) == 0)
-      {
-        dc.SetTextColor(dark->GetColour(DarkMode::Fore));
-        dc.SetBkColor(dark->GetColour(DarkMode::Back));
-        itemR.left -= 2;
-        dc.DrawFocusRect(itemR);
-      }
-    }
+      // Draw the selected item
+      CString itemText;
+      int itemIndex = GetCurSel();
+      if (itemIndex != CB_ERR)
+        GetLBText(itemIndex,itemText);
+      dc.SetTextColor(dark->GetColour(DarkMode::Fore));
+      dc.SetBkMode(TRANSPARENT);
+      itemR.left += 2;
+      CFont* oldFont = dc.SelectObject(GetFont());
+      dc.DrawText(itemText,itemR,DT_LEFT|DT_VCENTER|DT_HIDEPREFIX|DT_END_ELLIPSIS);
 
-    dc.SelectObject(oldFont);
+      // Draw the focus rectangle, if needed
+      if (!GetDroppedState() && (CWnd::GetFocus() == this))
+      {
+        if ((SendMessage(WM_QUERYUISTATE) & UISF_HIDEFOCUS) == 0)
+        {
+          dc.SetTextColor(dark->GetColour(DarkMode::Fore));
+          dc.SetBkColor(dark->GetColour(DarkMode::Back));
+          itemR.left -= 2;
+          dc.DrawFocusRect(itemR);
+        }
+      }
+
+      dc.SelectObject(oldFont);
+    }
     dc.SelectObject(oldPen);
   }
   else
     Default();
 }
 
+HBRUSH DarkModeComboBox::OnCtlColor(CDC* pDC, CWnd* pWnd, UINT nCtlColor)
+{
+  HBRUSH brush = CComboBox::OnCtlColor(pDC,pWnd,nCtlColor);
+  if (nCtlColor == CTLCOLOR_EDIT)
+  {
+    // For the edit control of an editable combo box
+    DarkMode* dark = DarkMode::GetActive(this);
+    if (dark)
+    {
+      DarkMode::DarkColour fill = DarkMode::Darkest;
+      CRect r;
+      GetClientRect(r);
+      if (dark->CursorInRect(this,r))
+        fill = DarkMode::Dark3;
+
+      brush = *(dark->GetBrush(fill));
+      pDC->SetBkColor(dark->GetColour(fill));
+      pDC->SetTextColor(dark->GetColour(DarkMode::Fore));
+    }
+  }
+  return brush;
+}
 // Dark mode controls: DarkModeEdit
 
 IMPLEMENT_DYNAMIC(DarkModeEdit, CEdit)
@@ -535,8 +567,8 @@ void DarkModeGroupBox::OnPaint()
     r.left += metrics.tmAveCharWidth;
     dc.SetTextColor(dark->GetColour(DarkMode::Fore));
     dc.SetBkColor(dark->GetColour(DarkMode::Back));
-    dc.SetBkMode(OPAQUE);
     GetParent()->SendMessage(WM_CTLCOLORSTATIC,(WPARAM)dc.GetSafeHdc(),(LPARAM)GetSafeHwnd());
+    dc.SetBkMode(OPAQUE);
     dc.DrawText(label,r,DT_LEFT|DT_TOP|DT_HIDEPREFIX|DT_SINGLELINE);
 
     dc.SelectObject(oldFont);
@@ -592,6 +624,46 @@ void DarkModeProgressCtrl::OnNcPaint()
     dark->DrawNonClientBorder(this,DarkMode::Dark3,DarkMode::Darkest);
   else
     Default();
+}
+
+// Dark mode controls: DarkModePropertyPage
+
+IMPLEMENT_DYNAMIC(DarkModePropertyPage, CPropertyPage)
+
+BEGIN_MESSAGE_MAP(DarkModePropertyPage, CPropertyPage)
+  ON_WM_CTLCOLOR()
+END_MESSAGE_MAP()
+
+DarkModePropertyPage::DarkModePropertyPage(UINT id) : CPropertyPage(id)
+{
+}
+
+HBRUSH DarkModePropertyPage::OnCtlColor(CDC* pDC, CWnd* pWnd, UINT nCtlColor)
+{
+  HBRUSH brush = CPropertyPage::OnCtlColor(pDC,pWnd,nCtlColor);
+  DarkMode* dark = DarkMode::GetActive(this);
+
+  switch (nCtlColor)
+  {
+  case CTLCOLOR_DLG:
+  case CTLCOLOR_STATIC:
+  case CTLCOLOR_EDIT:
+    if (dark)
+    {
+      brush = *(dark->GetBrush(DarkMode::Back));
+      pDC->SetBkColor(dark->GetColour(DarkMode::Back));
+      pDC->SetTextColor(dark->GetColour(DarkMode::Fore));
+    }
+    break;
+  case CTLCOLOR_LISTBOX: // For combo box dropdown lists
+    if (dark)
+    {
+      brush = *(dark->GetBrush(DarkMode::Darkest));
+      pDC->SetTextColor(dark->GetColour(DarkMode::Fore));
+    }
+    break;
+  }
+  return brush;
 }
 
 // Dark mode controls: DarkModeRadioButton
