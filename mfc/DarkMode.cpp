@@ -844,50 +844,74 @@ END_MESSAGE_MAP()
 
 void DarkModeSliderCtrl::OnCustomDraw(NMHDR* nmhdr, LRESULT* result)
 {
+  NMCUSTOMDRAW* nmcd = (NMCUSTOMDRAW*)nmhdr;
   *result = CDRF_DODEFAULT;
 
-  NMCUSTOMDRAW* nmcd = (NMCUSTOMDRAW*)nmhdr;
-  switch (nmcd->dwDrawStage)
+  DarkMode* dark = DarkMode::GetActive(this);
+  if (dark)
   {
-  case CDDS_PREPAINT:
-    *result = CDRF_NOTIFYITEMDRAW;
-    break;
-  case CDDS_ITEMPREPAINT:
-    {
-      DarkMode* dark = DarkMode::GetActive(this);
-      if (dark)
-      {
-        CDC* dc = CDC::FromHandle(nmcd->hdc);
-        CRect r(nmcd->rc);
+    CDC* dc = CDC::FromHandle(nmcd->hdc);
 
-        switch (nmcd->dwItemSpec)
+    switch (nmcd->dwDrawStage)
+    {
+    case CDDS_PREERASE:
+    case CDDS_PREPAINT:
+      *result = CDRF_SKIPDEFAULT;
+      {
+        // Draw the slider channel
+        CRect cr;
+        GetChannelRect(cr);
+        dark->DrawBorder(dc,cr,DarkMode::Dark3,DarkMode::Darkest);
+
+        // Draw the slider thumb
+        CRect tr;
+        GetThumbRect(tr);
+        DarkMode::DarkColour thumb = DarkMode::Dark2;
+        if (nmcd->uItemState & CDIS_SELECTED)
+          thumb = DarkMode::Fore;
+        else
         {
-        case TBCD_CHANNEL:
-          *result = CDRF_SKIPDEFAULT;
-          dark->DrawBorder(dc,r,DarkMode::Dark3,DarkMode::Darkest);
-          break;
-        case TBCD_THUMB:
-          *result = CDRF_SKIPDEFAULT;
+          // Is the mouse over the thumb?
+          if (dark->CursorInRect(this,tr))
+            thumb = DarkMode::Dark1;
+        }
+        dc->FillSolidRect(tr,dark->GetColour(thumb));
+
+        // Draw slider ticks
+        CPen tickPen;
+        tickPen.CreatePen(PS_SOLID,2,dark->GetColour(DarkMode::Dark2));
+        CPen* oldPen = dc->SelectObject(&tickPen);
+        int y = tr.bottom+1;
+        int x = cr.left + (tr.Width()/2);
+        dc->MoveTo(x,y);
+        dc->LineTo(x,y+8);
+        for (UINT i = 0; i < GetNumTics(); i++)
+        {
+          x = GetTicPos(i);
+          dc->MoveTo(x,y);
+          dc->LineTo(x,y+8);
+        }
+        x = cr.right - (tr.Width()/2);
+        dc->MoveTo(x,y);
+        dc->LineTo(x,y+8);
+        dc->SelectObject(oldPen);
+
+        // Draw a focus rectangle
+        if (CWnd::GetFocus() == this)
+        {
+          UINT uiState = (UINT)SendMessage(WM_QUERYUISTATE);
+          if ((uiState & UISF_HIDEFOCUS) == 0)
           {
-            DarkMode::DarkColour thumb = DarkMode::Dark2;
-            if (nmcd->uItemState & CDIS_SELECTED)
-              thumb = DarkMode::Fore;
-            else
-            {
-              // Is the mouse over the thumb?
-              if (dark->CursorInRect(this,r))
-                thumb = DarkMode::Dark1;
-            }
-            dc->FillSolidRect(r,dark->GetColour(thumb));
+            CRect r;
+            GetClientRect(r);
+            dc->SetTextColor(dark->GetColour(DarkMode::Fore));
+            dc->SetBkColor(dark->GetColour(DarkMode::Back));
+            dc->DrawFocusRect(r);
           }
-          break;
-        case TBCD_TICS:
-          *result = CDRF_SKIPDEFAULT;
-          break;
         }
       }
+      break;
     }
-    break;
   }
 }
 
