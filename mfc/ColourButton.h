@@ -1,5 +1,7 @@
 #pragma once
 
+class DarkMode;
+
 class ColourButton : public CButton
 {
 public:
@@ -16,7 +18,7 @@ protected:
   afx_msg void OnClicked();
   afx_msg void OnCustomDraw(NMHDR*, LRESULT*);
 
-  void DrawControl(CDC* dc, CRect r, bool disabled, bool focus);
+  void DrawControl(CDC* dc, CRect r, DarkMode* dark, bool disabled, bool focus);
 
   DECLARE_MESSAGE_MAP()
 

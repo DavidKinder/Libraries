@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "ColourButton.h"
+#include "DarkMode.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -48,6 +49,7 @@ void ColourButton::OnCustomDraw(NMHDR* nmhdr, LRESULT* result)
   {
   case CDDS_PREPAINT:
     {
+      DarkMode* dark = DarkMode::GetActive(this);
       CDC* dc = CDC::FromHandle(nmcd->hdc);
       CRect r(nmcd->rc);
 
@@ -57,7 +59,23 @@ void ColourButton::OnCustomDraw(NMHDR* nmhdr, LRESULT* result)
       if (SendMessage(WM_QUERYUISTATE) & UISF_HIDEFOCUS)
         focus = false;
 
-      if (::IsAppThemed())
+      if (dark)
+      {
+        DarkMode::DarkColour border = DarkMode::Dark2;
+        DarkMode::DarkColour fill = DarkMode::Darkest;
+
+        if (GetStyle() & BS_DEFPUSHBUTTON)
+          border = DarkMode::Fore;
+        if (selected)
+          fill = DarkMode::Dark1;
+        else if (nmcd->uItemState & CDIS_HOT)
+          fill = DarkMode::Dark2;
+        if (disabled)
+          border = DarkMode::Dark3;
+        dark->DrawBorder(dc,r,border,fill);
+        r.DeflateRect(2,2);
+      }
+      else if (::IsAppThemed())
       {
         HTHEME theme = ::OpenThemeData(GetSafeHwnd(),L"Button");
         if (theme)
@@ -82,20 +100,23 @@ void ColourButton::OnCustomDraw(NMHDR* nmhdr, LRESULT* result)
       }
 
       if (!disabled || m_showDisabled)
-        DrawControl(dc,r,disabled,focus);
+        DrawControl(dc,r,dark,disabled,focus);
       *result = CDRF_SKIPDEFAULT;
     }
     break;
   }
 }
 
-void ColourButton::DrawControl(CDC* dc, CRect r, bool disabled, bool focus)
+void ColourButton::DrawControl(CDC* dc, CRect r, DarkMode* dark, bool disabled, bool focus)
 {
   r.DeflateRect(2,2);
 
   // Draw the colour that the button represents
   CPen pen;
-  pen.CreatePen(PS_SOLID,1,::GetSysColor(disabled ? COLOR_GRAYTEXT : COLOR_BTNTEXT));
+  if (dark)
+    pen.CreatePen(PS_SOLID,1,dark->GetColour(DarkMode::Darkest));
+  else
+    pen.CreatePen(PS_SOLID,1,::GetSysColor(disabled ? COLOR_GRAYTEXT : COLOR_BTNTEXT));
   CBrush brush;
   brush.CreateSolidBrush(m_colour);
   CPen* oldPen = dc->SelectObject(&pen);
@@ -107,6 +128,16 @@ void ColourButton::DrawControl(CDC* dc, CRect r, bool disabled, bool focus)
   // Draw the focus rectangle
   if (focus)
   {
+    if (dark)
+    {
+      dc->SetTextColor(dark->GetColour(DarkMode::Fore));
+      dc->SetBkColor(dark->GetColour(DarkMode::Back));
+    }
+    else
+    {
+      dc->SetTextColor(::GetSysColor(COLOR_BTNTEXT));
+      dc->SetBkColor(::GetSysColor(COLOR_WINDOW));
+    }
     r.InflateRect(1,1);
     dc->DrawFocusRect(r);
   }
