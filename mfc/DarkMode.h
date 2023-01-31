@@ -154,6 +154,14 @@ protected:
   DECLARE_MESSAGE_MAP()
 };
 
+class DarkModeStatic : public CStatic
+{
+protected:
+  afx_msg void OnPaint();
+  afx_msg void OnEnable(BOOL bEnable);
+  DECLARE_MESSAGE_MAP()
+};
+
 class DarkModeToolBar : public CToolBar
 {
 protected:

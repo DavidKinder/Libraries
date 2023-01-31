@@ -333,6 +333,8 @@ void DarkModeCheckButton::OnCustomDraw(NMHDR* nmhdr, LRESULT* result)
           fore = DarkMode::Fore;
           back = DarkMode::Dark3;
         }
+        if (nmcd->uItemState & CDIS_DISABLED)
+          fore = DarkMode::Dark3;
 
         // Draw the border and background of the button
         CRect btnR(r.TopLeft(),CSize(btnSize,btnSize));
@@ -418,11 +420,14 @@ void DarkModeComboBox::OnPaint()
     GetComboBoxInfo(&info);
     CRect itemR(info.rcItem);
     CRect arrowR(info.rcButton);
+    bool disabled = ((GetStyle() & WS_DISABLED) != 0);
 
     // Get the colours for drawing
     DarkMode::DarkColour border = m_border;
     DarkMode::DarkColour fill = DarkMode::Darkest;
-    if (GetDroppedState())
+    if (disabled)
+      border = DarkMode::Dark3;
+    else if (GetDroppedState())
     {
       border = m_activeBorder;
       fill = DarkMode::Dark2;
@@ -458,7 +463,7 @@ void DarkModeComboBox::OnPaint()
       int itemIndex = GetCurSel();
       if (itemIndex != CB_ERR)
         GetLBText(itemIndex,itemText);
-      dc.SetTextColor(dark->GetColour(DarkMode::Fore));
+      dc.SetTextColor(dark->GetColour(disabled ? DarkMode::Dark3 : DarkMode::Fore));
       dc.SetBkMode(TRANSPARENT);
       itemR.left += 2;
       CFont* oldFont = dc.SelectObject(GetFont());
@@ -930,6 +935,51 @@ LRESULT DarkModeSliderCtrl::OnSetPos(WPARAM, LPARAM)
   // of the control to be called directly, so here we force a redraw.
   RedrawWindow(NULL,NULL,RDW_INVALIDATE);
   return result;
+}
+
+// Dark mode controls: DarkModeStatic
+
+BEGIN_MESSAGE_MAP(DarkModeStatic, CStatic)
+  ON_WM_PAINT()
+  ON_WM_ENABLE()
+END_MESSAGE_MAP()
+
+void DarkModeStatic::OnPaint()
+{
+  DarkMode* dark = DarkMode::GetActive(this);
+  if (dark)
+  {
+    CRect r;
+    GetClientRect(r);
+    CPaintDC dc(this);
+
+    CFont* oldFont = dc.SelectObject(GetFont());
+
+    CString label;
+    GetWindowText(label);
+    DWORD style = GetStyle();
+    UINT dtFlags = DT_TOP|DT_HIDEPREFIX;
+    if (style & SS_RIGHT)
+      dtFlags |= DT_RIGHT;
+    GetParent()->SendMessage(WM_CTLCOLORSTATIC,(WPARAM)dc.GetSafeHdc(),(LPARAM)GetSafeHwnd());
+    dc.SetBkMode(OPAQUE);
+    if (style & WS_DISABLED)
+      dc.SetTextColor(dark->GetColour(DarkMode::Dark3));
+    dc.DrawText(label,r,dtFlags);
+
+    dc.SelectObject(oldFont);
+  }
+  else
+    Default();
+}
+
+void DarkModeStatic::OnEnable(BOOL bEnable)
+{
+  CStatic::OnEnable(bEnable);
+
+  // Changing the enabled state will cause the internal painting logic
+  // of the control to be called directly, so here we force a redraw.
+  RedrawWindow(NULL,NULL,RDW_INVALIDATE|RDW_UPDATENOW);
 }
 
 // Dark mode controls: DarkModeToolBar
