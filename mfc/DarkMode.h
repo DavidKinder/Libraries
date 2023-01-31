@@ -74,11 +74,10 @@ class DarkModeComboBox : public CComboBox
 public:
   void SetDarkBorder(DarkMode::DarkColour colour, DarkMode::DarkColour activeColour);
 
-	int SetCurSel(int select);
-
 protected:
   afx_msg void OnPaint();
   afx_msg HBRUSH OnCtlColor(CDC* pDC, CWnd* pWnd, UINT nCtlColor);
+  afx_msg LRESULT OnSetCurSel(WPARAM, LPARAM);
   DECLARE_MESSAGE_MAP()
 
   DarkMode::DarkColour m_border = DarkMode::Dark1;
@@ -151,6 +150,7 @@ class DarkModeSliderCtrl : public CSliderCtrl
 protected:
   afx_msg void OnCustomDraw(NMHDR*, LRESULT*);
   afx_msg BOOL OnEraseBkgnd(CDC* pDC);
+  afx_msg LRESULT OnSetPos(WPARAM, LPARAM);
   DECLARE_MESSAGE_MAP()
 };
 

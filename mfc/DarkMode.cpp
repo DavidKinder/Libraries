@@ -395,23 +395,13 @@ bool DarkModeCheckButton::HasFocusRect(UINT uiState)
 BEGIN_MESSAGE_MAP(DarkModeComboBox, CComboBox)
   ON_WM_PAINT()
   ON_WM_CTLCOLOR()
+  ON_MESSAGE(CB_SETCURSEL, OnSetCurSel)
 END_MESSAGE_MAP()
 
 void DarkModeComboBox::SetDarkBorder(DarkMode::DarkColour colour, DarkMode::DarkColour activeColour)
 {
   m_border = colour;
   m_activeBorder = activeColour;
-}
-
-int DarkModeComboBox::SetCurSel(int select)
-{
-  int result = CComboBox::SetCurSel(select);
-
-  // Changing the combo box selection will cause the internal painting logic
-  // of the control to be called directly, so here we invalidate the control
-  // so that our painting logic is used.
-  Invalidate();
-  return result;
 }
 
 void DarkModeComboBox::OnPaint()
@@ -516,6 +506,17 @@ HBRUSH DarkModeComboBox::OnCtlColor(CDC* pDC, CWnd* pWnd, UINT nCtlColor)
   }
   return brush;
 }
+
+LRESULT DarkModeComboBox::OnSetCurSel(WPARAM, LPARAM)
+{
+  LRESULT result = Default();
+
+  // Changing the combo box selection will cause the internal painting logic
+  // of the control to be called directly, so here we force a redraw.
+  RedrawWindow(NULL,NULL,RDW_INVALIDATE|RDW_UPDATENOW);
+  return result;
+}
+
 // Dark mode controls: DarkModeEdit
 
 IMPLEMENT_DYNAMIC(DarkModeEdit, CEdit)
@@ -840,6 +841,7 @@ void DarkModeRadioButton::OnCustomDraw(NMHDR* nmhdr, LRESULT* result)
 BEGIN_MESSAGE_MAP(DarkModeSliderCtrl, CSliderCtrl)
   ON_NOTIFY_REFLECT(NM_CUSTOMDRAW, OnCustomDraw)
   ON_WM_ERASEBKGND()
+  ON_MESSAGE(TBM_SETPOS, OnSetPos)
 END_MESSAGE_MAP()
 
 void DarkModeSliderCtrl::OnCustomDraw(NMHDR* nmhdr, LRESULT* result)
@@ -918,6 +920,16 @@ void DarkModeSliderCtrl::OnCustomDraw(NMHDR* nmhdr, LRESULT* result)
 BOOL DarkModeSliderCtrl::OnEraseBkgnd(CDC* pDC)
 {
   return TRUE;
+}
+
+LRESULT DarkModeSliderCtrl::OnSetPos(WPARAM, LPARAM)
+{
+  LRESULT result = Default();
+
+  // Changing the slider position will cause the internal painting logic
+  // of the control to be called directly, so here we force a redraw.
+  RedrawWindow(NULL,NULL,RDW_INVALIDATE);
+  return result;
 }
 
 // Dark mode controls: DarkModeToolBar
