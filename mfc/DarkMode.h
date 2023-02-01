@@ -7,8 +7,8 @@ class DarkMode
 public:
   DarkMode();
 
-  static bool IsEnabled(void);
-  static DarkMode* GetEnabled(void);
+  static bool IsEnabled(const char* path);
+  static DarkMode* GetEnabled(const char* path);
   static DarkMode* GetActive(CWnd* wnd);
 
   static void Set(CFrameWnd* frame, DarkMode* dark);

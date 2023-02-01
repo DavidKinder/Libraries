@@ -17,8 +17,19 @@ DarkMode::DarkMode()
   m_colours[No_Colour] = 0;
 }
 
-bool DarkMode::IsEnabled(void)
+bool DarkMode::IsEnabled(const char* path)
 {
+  if (path)
+  {
+    CRegKey key;
+    if (key.Open(HKEY_CURRENT_USER,path,KEY_READ) == ERROR_SUCCESS)
+    {
+      DWORD use = 0;
+      if (key.QueryDWORDValue("ForceDarkMode",use) == ERROR_SUCCESS)
+        return (use != 0);
+    }
+  }
+
   // No dark mode if high contrast is active
   HIGHCONTRAST contrast = { sizeof(contrast), 0 };
   if (::SystemParametersInfo(SPI_GETHIGHCONTRAST,sizeof(contrast),&contrast,FALSE))
@@ -27,12 +38,12 @@ bool DarkMode::IsEnabled(void)
       return false;
   }
 
-  CRegKey key;
-  LPCSTR path = "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize";
-  if (key.Open(HKEY_CURRENT_USER,path,KEY_READ) == ERROR_SUCCESS)
+  CRegKey sysKey;
+  LPCSTR sysPath = "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize";
+  if (sysKey.Open(HKEY_CURRENT_USER,sysPath,KEY_READ) == ERROR_SUCCESS)
   {
     DWORD theme = 0;
-    if (key.QueryDWORDValue("AppsUseLightTheme",theme) == ERROR_SUCCESS)
+    if (sysKey.QueryDWORDValue("AppsUseLightTheme",theme) == ERROR_SUCCESS)
     {
       if (theme == 0)
         return true;
@@ -42,9 +53,9 @@ bool DarkMode::IsEnabled(void)
   return false;
 }
 
-DarkMode* DarkMode::GetEnabled(void)
+DarkMode* DarkMode::GetEnabled(const char* path)
 {
-  if (IsEnabled())
+  if (IsEnabled(path))
     return new DarkMode();
   return NULL;
 }
