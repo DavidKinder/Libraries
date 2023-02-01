@@ -644,6 +644,10 @@ DarkModePropertyPage::DarkModePropertyPage(UINT id) : CPropertyPage(id)
 {
 }
 
+void DarkModePropertyPage::SetDarkMode(DarkMode* dark)
+{
+}
+
 HBRUSH DarkModePropertyPage::OnCtlColor(CDC* pDC, CWnd* pWnd, UINT nCtlColor)
 {
   HBRUSH brush = CPropertyPage::OnCtlColor(pDC,pWnd,nCtlColor);
@@ -670,6 +674,60 @@ HBRUSH DarkModePropertyPage::OnCtlColor(CDC* pDC, CWnd* pWnd, UINT nCtlColor)
     break;
   }
   return brush;
+}
+
+// Dark mode controls: DarkModePropertySheet
+
+IMPLEMENT_DYNAMIC(DarkModePropertySheet, CPropertySheet)
+
+BEGIN_MESSAGE_MAP(DarkModePropertySheet, CPropertySheet)
+  ON_WM_ERASEBKGND()
+END_MESSAGE_MAP()
+
+DarkModePropertySheet::DarkModePropertySheet(LPCSTR caption) : CPropertySheet(caption)
+{
+}
+
+BOOL DarkModePropertySheet::OnInitDialog()
+{
+  CPropertySheet::OnInitDialog();
+
+  m_okBtn.SubclassDlgItem(IDOK,this);
+  m_cancelBtn.SubclassDlgItem(IDCANCEL,this);
+  m_tabCtrl.SubclassWindow((HWND)SendMessage(PSM_GETTABCONTROL));
+  return TRUE;
+}
+
+BOOL DarkModePropertySheet::OnEraseBkgnd(CDC* dc)
+{
+  DarkMode* dark = DarkMode::GetActive(this);
+  if (dark)
+  {
+    CRect r;
+    GetClientRect(r);
+    dc->FillSolidRect(r,dark->GetColour(DarkMode::Darkest));
+    return TRUE;
+  }
+  else
+    return CPropertySheet::OnEraseBkgnd(dc);
+}
+
+void DarkModePropertySheet::SetDarkMode(DarkMode* dark)
+{
+  if (GetSafeHwnd() != 0)
+  {
+    BOOL darkTitle = (dark != NULL);
+    ::DwmSetWindowAttribute(GetSafeHwnd(),DWMWA_USE_IMMERSIVE_DARK_MODE,&darkTitle,sizeof darkTitle);
+
+    for (int i = 0; i < GetPageCount(); i++)
+    {
+      CPropertyPage* page = GetActivePage();
+      if (page->IsKindOf(RUNTIME_CLASS(DarkModePropertyPage)))
+        ((DarkModePropertyPage*)page)->SetDarkMode(dark);
+    }
+
+    RedrawWindow(NULL,NULL,RDW_ERASE|RDW_INVALIDATE|RDW_ALLCHILDREN);
+  }
 }
 
 // Dark mode controls: DarkModeRadioButton
@@ -924,7 +982,11 @@ void DarkModeSliderCtrl::OnCustomDraw(NMHDR* nmhdr, LRESULT* result)
 
 BOOL DarkModeSliderCtrl::OnEraseBkgnd(CDC* pDC)
 {
-  return TRUE;
+  DarkMode* dark = DarkMode::GetActive(this);
+  if (dark)
+    return TRUE;
+  else
+    return CSliderCtrl::OnEraseBkgnd(pDC);
 }
 
 LRESULT DarkModeSliderCtrl::OnSetPos(WPARAM, LPARAM)
@@ -980,6 +1042,113 @@ void DarkModeStatic::OnEnable(BOOL bEnable)
   // Changing the enabled state will cause the internal painting logic
   // of the control to be called directly, so here we force a redraw.
   RedrawWindow(NULL,NULL,RDW_INVALIDATE|RDW_UPDATENOW);
+}
+
+// Dark mode controls: DarkModeTabCtrl
+
+BEGIN_MESSAGE_MAP(DarkModeTabCtrl, CTabCtrl)
+  ON_WM_PAINT()
+  ON_WM_MOUSEMOVE()
+  ON_MESSAGE(WM_MOUSELEAVE, OnMouseLeave)
+END_MESSAGE_MAP()
+
+void DarkModeTabCtrl::OnPaint()
+{
+  DarkMode* dark = DarkMode::GetActive(this);
+  if (dark)
+  {
+    CRect r;
+    GetClientRect(r);
+    CPaintDC dc(this);
+
+    CRect ir;
+    GetItemRect(0,ir);
+    int y = ir.bottom;
+
+    dc.FillSolidRect(r,dark->GetColour(DarkMode::Darkest));
+    r.top = y;
+    dark->DrawBorder(&dc,r,DarkMode::Dark2,DarkMode::Back);
+
+    int sel = GetCurSel();
+    for (int i = 0; i < GetItemCount(); i++)
+    {
+      GetItemRect(i,ir);
+      if (i == 0)
+        ir.left = 0;
+      ir.bottom = y+1;
+
+      TCITEM item = { TCIF_TEXT|TCIF_STATE,0 };
+      char label[256];
+      item.pszText = label;
+      item.cchTextMax = sizeof(label);
+      GetItem(i,&item);
+
+      if (i == sel)
+        dc.FillSolidRect(ir,dark->GetColour(DarkMode::Back));
+      else if (i == m_mouseOverItem)
+        dc.FillSolidRect(ir,dark->GetColour(DarkMode::Dark2));
+
+      dc.SetTextColor(dark->GetColour(DarkMode::Fore));
+      dc.SetBkMode(TRANSPARENT);
+      CFont* oldFont = dc.SelectObject(GetFont());
+      dc.DrawText(label,ir,DT_SINGLELINE|DT_CENTER|DT_VCENTER);
+      dc.SelectObject(oldFont);
+
+      if (i == sel)
+      {
+        CPen pen;
+        pen.CreatePen(PS_SOLID,1,dark->GetColour(DarkMode::Dark2));
+        CPen* oldPen = dc.SelectObject(&pen);
+        dc.MoveTo(ir.left,ir.bottom-1);
+        dc.LineTo(ir.left,ir.top);
+        dc.LineTo(ir.right,ir.top);
+        dc.LineTo(ir.right,ir.bottom);
+        dc.SelectObject(oldPen);
+      }
+    }
+  }
+  else
+    Default();
+}
+
+void DarkModeTabCtrl::OnMouseMove(UINT nFlags, CPoint point)
+{
+  int hotTab = -1;
+  for (int i = 0; i < GetItemCount(); i++)
+  {
+    CRect r;
+    GetItemRect(i,r);
+    if (r.PtInRect(point))
+      hotTab = i;
+  }
+
+  if (m_mouseOverItem != hotTab)
+  {
+    m_mouseOverItem = hotTab;
+    Invalidate();
+
+    if (!m_mouseTrack)
+    {
+      // Listen for the mouse leaving this control
+      TRACKMOUSEEVENT tme = { sizeof(TRACKMOUSEEVENT), 0 };
+      tme.dwFlags = TME_LEAVE;
+      tme.hwndTrack = GetSafeHwnd();
+      ::TrackMouseEvent(&tme);
+      m_mouseTrack = true;
+    }
+  }
+  CTabCtrl::OnMouseMove(nFlags,point);
+}
+
+LRESULT DarkModeTabCtrl::OnMouseLeave(WPARAM, LPARAM)
+{
+  if (m_mouseOverItem >= 0)
+  {
+    m_mouseOverItem = -1;
+    m_mouseTrack = false;
+    Invalidate();
+  }
+  return Default();
 }
 
 // Dark mode controls: DarkModeToolBar

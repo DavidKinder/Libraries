@@ -110,11 +110,23 @@ protected:
 class DarkModeProgressCtrl : public CProgressCtrl
 {
 public:
-  void SetDarkMode(DarkMode* dark);
+  virtual void SetDarkMode(DarkMode* dark);
 
 protected:
   afx_msg void OnNcPaint();
   DECLARE_MESSAGE_MAP()
+};
+
+class DarkModeTabCtrl : public CTabCtrl
+{
+protected:
+  afx_msg void OnPaint();
+  afx_msg void OnMouseMove(UINT nFlags, CPoint point);
+  afx_msg LRESULT OnMouseLeave(WPARAM, LPARAM);
+  DECLARE_MESSAGE_MAP()
+
+  int m_mouseOverItem = -1;
+  bool m_mouseTrack = false;
 };
 
 class DarkModePropertyPage : public CPropertyPage
@@ -122,11 +134,31 @@ class DarkModePropertyPage : public CPropertyPage
   DECLARE_DYNAMIC(DarkModePropertyPage)
 
 public:
-  DarkModePropertyPage(UINT id);
+  explicit DarkModePropertyPage(UINT id);
+  virtual void SetDarkMode(DarkMode* dark);
 
 protected:
   afx_msg HBRUSH OnCtlColor(CDC* pDC, CWnd* pWnd, UINT nCtlColor);
   DECLARE_MESSAGE_MAP()
+};
+
+class DarkModePropertySheet : public CPropertySheet
+{
+  DECLARE_DYNAMIC(DarkModePropertySheet)
+
+public:
+  explicit DarkModePropertySheet(LPCSTR caption);
+  virtual void SetDarkMode(DarkMode* dark);
+
+  virtual BOOL OnInitDialog();
+
+protected:
+  afx_msg BOOL OnEraseBkgnd(CDC* pDC);
+  DECLARE_MESSAGE_MAP()
+
+  DarkModeButton m_okBtn;
+  DarkModeButton m_cancelBtn;
+  DarkModeTabCtrl m_tabCtrl;
 };
 
 class DarkModeRadioButton : public CButton
