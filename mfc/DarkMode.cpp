@@ -6,6 +6,29 @@
 #define new DEBUG_NEW
 #endif
 
+static bool CheckWindowsVersion(DWORD major, DWORD minor, DWORD build)
+{
+  static DWORD os_major = 0, os_minor = 0, os_build = 0;
+
+  if (os_major == 0)
+  {
+    typedef void(__stdcall *RTLGETNTVERSIONNUMBERS)(LPDWORD, LPDWORD, LPDWORD);
+    RTLGETNTVERSIONNUMBERS RtlGetNtVersionNumbers =
+      (RTLGETNTVERSIONNUMBERS)GetProcAddress(GetModuleHandle("ntdll.dll"),"RtlGetNtVersionNumbers");
+    if (RtlGetNtVersionNumbers)
+    {
+      (*RtlGetNtVersionNumbers)(&os_major,&os_minor,&os_build);
+      os_build &= 0x0FFFFFFF;
+    }
+  }
+
+  if (major != os_major)
+    return (major < os_major);
+  if (minor != os_minor)
+    return (minor < os_minor);
+  return (build <= os_build);
+}
+
 DarkMode::DarkMode()
 {
   m_colours[Back]    = RGB(0x00,0x00,0x00);
@@ -64,6 +87,23 @@ DarkMode* DarkMode::GetActive(CWnd* wnd)
 {
   CWnd* frame = wnd->IsFrameWnd() ? wnd : wnd->GetParentFrame();
   return (DarkMode*)frame->SendMessage(WM_DARKMODE_ACTIVE);
+}
+
+void DarkMode::SetAppDarkMode(const char* path)
+{
+  if (CheckWindowsVersion(10,0,18362)) // Windows 10 build 1903 "19H1"
+  {
+    HMODULE uxtheme = ::LoadLibrary("uxtheme.dll");
+    if (uxtheme != 0)
+    {
+      typedef int(__stdcall *SETPREFERREDAPPMODE)(int);
+      SETPREFERREDAPPMODE SetPreferredAppMode =
+        (SETPREFERREDAPPMODE)::GetProcAddress(uxtheme,MAKEINTRESOURCE(135));
+      if (SetPreferredAppMode)
+        (*SetPreferredAppMode)(IsEnabled(path) ? 2 : 3);
+      ::FreeLibrary(uxtheme);
+    }
+  }
 }
 
 void DarkMode::Set(CFrameWnd* frame, DarkMode* dark)
