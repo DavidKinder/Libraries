@@ -10,8 +10,8 @@ public:
   static bool IsEnabled(const char* path);
   static DarkMode* GetEnabled(const char* path);
   static DarkMode* GetActive(CWnd* wnd);
-  static void SetAppDarkMode(const char* path);
 
+  static void SetAppDarkMode(void);
   static void Set(CFrameWnd* frame, DarkMode* dark);
   static void Set(CDialog* dlg, DarkMode* dark);
   static void Set(CReBar* bar, DarkMode* dark);

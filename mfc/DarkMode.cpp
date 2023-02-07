@@ -89,7 +89,7 @@ DarkMode* DarkMode::GetActive(CWnd* wnd)
   return (DarkMode*)frame->SendMessage(WM_DARKMODE_ACTIVE);
 }
 
-void DarkMode::SetAppDarkMode(const char* path)
+void DarkMode::SetAppDarkMode(void)
 {
   if (CheckWindowsVersion(10,0,18362)) // Windows 10 build 1903 "19H1"
   {
@@ -100,7 +100,7 @@ void DarkMode::SetAppDarkMode(const char* path)
       SETPREFERREDAPPMODE SetPreferredAppMode =
         (SETPREFERREDAPPMODE)::GetProcAddress(uxtheme,MAKEINTRESOURCE(135));
       if (SetPreferredAppMode)
-        (*SetPreferredAppMode)(IsEnabled(path) ? 2 : 3);
+        (*SetPreferredAppMode)(1);
       ::FreeLibrary(uxtheme);
     }
   }
