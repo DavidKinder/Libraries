@@ -772,7 +772,7 @@ void DarkModePropertySheet::SetDarkMode(DarkMode* dark)
 
     for (int i = 0; i < GetPageCount(); i++)
     {
-      CPropertyPage* page = GetActivePage();
+      CPropertyPage* page = GetPage(i);
       if (page->IsKindOf(RUNTIME_CLASS(DarkModePropertyPage)))
         ((DarkModePropertyPage*)page)->SetDarkMode(dark);
     }
