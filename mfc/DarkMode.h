@@ -73,6 +73,7 @@ protected:
 class DarkModeComboBox : public CComboBox
 {
 public:
+  void SetDarkMode(DarkMode* dark);
   void SetDarkBorder(DarkMode::DarkColour colour, DarkMode::DarkColour activeColour);
 
 protected:
@@ -136,7 +137,7 @@ class DarkModePropertyPage : public CPropertyPage
 
 public:
   explicit DarkModePropertyPage(UINT id);
-  virtual void SetDarkMode(DarkMode* dark);
+  virtual void SetDarkMode(DarkMode* dark, bool init);
 
 protected:
   afx_msg HBRUSH OnCtlColor(CDC* pDC, CWnd* pWnd, UINT nCtlColor);
@@ -149,7 +150,7 @@ class DarkModePropertySheet : public CPropertySheet
 
 public:
   explicit DarkModePropertySheet(LPCSTR caption);
-  virtual void SetDarkMode(DarkMode* dark);
+  virtual void SetDarkMode(DarkMode* dark, bool init);
 
   virtual BOOL OnInitDialog();
 

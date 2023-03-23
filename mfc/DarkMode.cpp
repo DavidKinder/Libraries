@@ -451,6 +451,18 @@ BEGIN_MESSAGE_MAP(DarkModeComboBox, CComboBox)
   ON_MESSAGE(CB_SETCURSEL, OnSetCurSel)
 END_MESSAGE_MAP()
 
+void DarkModeComboBox::SetDarkMode(DarkMode* dark)
+{
+  // Set a theme on the list control so that, if there is a scrollbar on the list, it is dark
+  COMBOBOXINFO info = { sizeof (COMBOBOXINFO), 0 };
+  GetComboBoxInfo(&info);
+  if (info.hwndList != 0)
+  {
+    LPCWSTR theme = dark ? L"DarkMode_Explorer" : NULL;
+    ::SetWindowTheme(info.hwndList,theme,NULL);
+  }
+}
+
 void DarkModeComboBox::SetDarkBorder(DarkMode::DarkColour colour, DarkMode::DarkColour activeColour)
 {
   m_border = colour;
@@ -695,7 +707,7 @@ DarkModePropertyPage::DarkModePropertyPage(UINT id) : CPropertyPage(id)
 {
 }
 
-void DarkModePropertyPage::SetDarkMode(DarkMode* dark)
+void DarkModePropertyPage::SetDarkMode(DarkMode* dark, bool init)
 {
 }
 
@@ -763,7 +775,7 @@ BOOL DarkModePropertySheet::OnEraseBkgnd(CDC* dc)
     return CPropertySheet::OnEraseBkgnd(dc);
 }
 
-void DarkModePropertySheet::SetDarkMode(DarkMode* dark)
+void DarkModePropertySheet::SetDarkMode(DarkMode* dark, bool init)
 {
   if (GetSafeHwnd() != 0)
   {
@@ -774,7 +786,7 @@ void DarkModePropertySheet::SetDarkMode(DarkMode* dark)
     {
       CPropertyPage* page = GetPage(i);
       if (page->IsKindOf(RUNTIME_CLASS(DarkModePropertyPage)))
-        ((DarkModePropertyPage*)page)->SetDarkMode(dark);
+        ((DarkModePropertyPage*)page)->SetDarkMode(dark,init);
     }
 
     RedrawWindow(NULL,NULL,RDW_ERASE|RDW_INVALIDATE|RDW_ALLCHILDREN);
