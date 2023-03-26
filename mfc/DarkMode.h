@@ -104,6 +104,9 @@ protected:
 
 class DarkModeListBox : public CListBox
 {
+public:
+  void SetDarkMode(DarkMode* dark);
+
 protected:
   afx_msg void OnNcPaint();
   DECLARE_MESSAGE_MAP()

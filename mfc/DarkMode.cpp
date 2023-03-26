@@ -453,13 +453,16 @@ END_MESSAGE_MAP()
 
 void DarkModeComboBox::SetDarkMode(DarkMode* dark)
 {
-  // Set a theme on the list control so that, if there is a scrollbar on the list, it is dark
-  COMBOBOXINFO info = { sizeof (COMBOBOXINFO), 0 };
-  GetComboBoxInfo(&info);
-  if (info.hwndList != 0)
+  if (GetSafeHwnd() != 0)
   {
-    LPCWSTR theme = dark ? L"DarkMode_Explorer" : NULL;
-    ::SetWindowTheme(info.hwndList,theme,NULL);
+    // Set a theme on the list control so that, if there is a scrollbar on the list, it is dark
+    COMBOBOXINFO info = { sizeof (COMBOBOXINFO), 0 };
+    GetComboBoxInfo(&info);
+    if (info.hwndList != 0)
+    {
+      LPCWSTR theme = dark ? L"DarkMode_Explorer" : NULL;
+      ::SetWindowTheme(info.hwndList,theme,NULL);
+    }
   }
 }
 
@@ -652,14 +655,44 @@ BEGIN_MESSAGE_MAP(DarkModeListBox, CListBox)
   ON_WM_NCPAINT()
 END_MESSAGE_MAP()
 
+void DarkModeListBox::SetDarkMode(DarkMode* dark)
+{
+  if (GetSafeHwnd() != 0)
+  {
+    LPCWSTR theme = dark ? L"DarkMode_Explorer" : NULL;
+    ::SetWindowTheme(GetSafeHwnd(),theme,NULL);
+  }
+}
+
 void DarkModeListBox::OnNcPaint()
 {
   DarkMode* dark = DarkMode::GetActive(this);
   if (dark)
   {
+    // Do default drawing first, to draw any scrollbar
+    Default();
+
+    CWindowDC dc(this);
+
+    // Get the window and client rectangles, in the window co-ordinate space
+    CRect rw, rc;
+    GetWindowRect(rw);
+    ScreenToClient(rw);
+    GetClientRect(rc);
+    rc.OffsetRect(-rw.TopLeft());
+    rw.OffsetRect(-rw.TopLeft());
+
+    // There may be a vertical scrollbar, so adjust the client area
+    // (which is excluded from drawing) to include it
+    rc.right = rw.right - (rc.left - rw.left);
+
+    // Draw the border around the window
+    dc.ExcludeClipRect(rc);
+    dc.IntersectClipRect(rw);
     DarkMode::DarkColour border =
       (CWnd::GetFocus() == this) ? DarkMode::Dark1 : DarkMode::Dark2;
-    dark->DrawNonClientBorder(this,border,DarkMode::Darkest);
+    dark->DrawBorder(&dc,rw,border,DarkMode::Darkest);
+    dc.SelectClipRgn(NULL);
   }
   else
     Default();
