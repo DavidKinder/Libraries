@@ -72,7 +72,7 @@ void ColourButton::OnCustomDraw(NMHDR* nmhdr, LRESULT* result)
           fill = DarkMode::Dark2;
         if (disabled)
           border = DarkMode::Dark3;
-        dark->DrawBorder(dc,r,border,fill);
+        dark->DrawButtonBorder(dc,r,border,dark->GetBackground(this),fill);
         r.DeflateRect(2,2);
       }
       else if (::IsAppThemed())

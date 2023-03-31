@@ -34,13 +34,17 @@ public:
   CBrush* GetBrush(DarkColour colour);
 
   void DrawBorder(CDC* dc, const CRect& r, DarkColour border, DarkColour fill);
+  void DrawButtonBorder(CDC* dc, const CRect& r, DarkColour border, DarkColour back, DarkColour fill);
   void DrawNonClientBorder(CWnd* wnd, DarkColour colour, DarkColour fill);
 
   bool CursorInRect(CWnd* wnd, CRect r);
+  DarkColour GetBackground(CWnd* wnd);
 
 protected:
   COLORREF m_colours[Number_Colours];
   CBrush m_brushes[Number_Colours];
+
+  bool rounded = false;
 };
 
 class DarkModeButton : public CButton
@@ -58,7 +62,7 @@ public:
   DarkModeCheckButton();
   ~DarkModeCheckButton();
 
-  BOOL SubclassDlgItem(UINT id, CWnd* parent, UINT imageId, DarkMode::DarkColour back);
+  BOOL SubclassDlgItem(UINT id, CWnd* parent, UINT imageId);
 
 protected:
   afx_msg void OnCustomDraw(NMHDR*, LRESULT*);
@@ -172,7 +176,7 @@ public:
   DarkModeRadioButton();
   ~DarkModeRadioButton();
 
-  BOOL SubclassDlgItem(UINT id, CWnd* parent, UINT imageId, DarkMode::DarkColour back);
+  BOOL SubclassDlgItem(UINT id, CWnd* parent, UINT imageId);
 
 protected:
   afx_msg void OnCustomDraw(NMHDR*, LRESULT*);

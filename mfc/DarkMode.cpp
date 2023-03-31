@@ -38,6 +38,10 @@ DarkMode::DarkMode()
   m_colours[Dark3]   = RGB(0x40,0x40,0x40);
   m_colours[Darkest] = RGB(0x20,0x20,0x20);
   m_colours[No_Colour] = 0;
+
+  // Dark mode appearance changes for Windows 11
+  if (CheckWindowsVersion(11,0,0))
+    rounded = true;
 }
 
 bool DarkMode::IsEnabled(const char* path)
@@ -45,11 +49,19 @@ bool DarkMode::IsEnabled(const char* path)
   if (path)
   {
     CRegKey key;
-    if (key.Open(HKEY_CURRENT_USER,path,KEY_READ) == ERROR_SUCCESS)
+    if (key.Open(HKEY_CURRENT_USER,path,KEY_READ|KEY_WRITE) == ERROR_SUCCESS)
     {
-      DWORD use = 0;
-      if (key.QueryDWORDValue("ForceDarkMode",use) == ERROR_SUCCESS)
-        return (use != 0);
+      DWORD disable = 0;
+      if (key.QueryDWORDValue("DisableDarkMode",disable) == ERROR_SUCCESS)
+      {
+        if (disable != 0)
+          return false;
+      }
+      else
+      {
+        // Ensure key exists so that the user can disable dark mode
+        key.SetDWORDValue("DisableDarkMode",0);
+      }
     }
   }
 
@@ -100,7 +112,10 @@ void DarkMode::SetAppDarkMode(void)
       SETPREFERREDAPPMODE SetPreferredAppMode =
         (SETPREFERREDAPPMODE)::GetProcAddress(uxtheme,MAKEINTRESOURCE(135));
       if (SetPreferredAppMode)
-        (*SetPreferredAppMode)(1);
+      {
+        int result = (*SetPreferredAppMode)(1);
+        printf("%d\n",result);
+      }
       ::FreeLibrary(uxtheme);
     }
   }
@@ -200,6 +215,43 @@ void DarkMode::DrawBorder(CDC* dc, const CRect& r, DarkColour border, DarkColour
   dc->SelectObject(oldBrush);
 }
 
+void DarkMode::DrawButtonBorder(CDC* dc, const CRect& r, DarkColour border, DarkColour back, DarkColour fill)
+{
+  DrawBorder(dc,r,border,fill);
+
+  if (rounded)
+  {
+    BYTE i1 = GetRValue(GetColour(border));
+    BYTE i2 = GetRValue(GetColour(back));
+    BYTE i3 = GetRValue(GetColour(fill));
+
+    auto DrawRound=[&](int x, int y, int xs, int ys)
+    {
+      dc->SetPixel(x,y,RGB(i2,i2,i2));
+      double f = 0.12;
+      BYTE i = (BYTE)((i1*f)+(i2*(1.0-f)));
+      dc->SetPixel(x+xs,y,RGB(i,i,i));
+      dc->SetPixel(x,y+ys,RGB(i,i,i));
+      f = 0.76;
+      i = (BYTE)((i1*f)+(i2*(1.0-f)));
+      dc->SetPixel(x+xs+xs,y,RGB(i,i,i));
+      dc->SetPixel(x,y+ys+ys,RGB(i,i,i));
+      f = 0.93;
+      i = (BYTE)((i1*f)+(i2*(1.0-f)));
+      dc->SetPixel(x+xs,y+ys,RGB(i,i,i));
+      f = 0.45;
+      i = (BYTE)((i1*f)+(i3*(1.0-f)));
+      dc->SetPixel(x+xs+xs,y+ys,RGB(i,i,i));
+      dc->SetPixel(x+xs,y+ys+ys,RGB(i,i,i));
+    };
+
+    DrawRound(r.left,r.top,1,1);
+    DrawRound(r.right-1,r.top,-1,1);
+    DrawRound(r.left,r.bottom-1,1,-1);
+    DrawRound(r.right-1,r.bottom-1,-1,-1);
+  }
+}
+
 void DarkMode::DrawNonClientBorder(CWnd* wnd, DarkColour border, DarkColour fill)
 {
   CWindowDC dc(wnd);
@@ -229,6 +281,16 @@ bool DarkMode::CursorInRect(CWnd* wnd, CRect r)
   ::GetCursorPos(&cursor);
   wnd->ClientToScreen(r);
   return r.PtInRect(cursor);
+}
+
+DarkMode::DarkColour DarkMode::GetBackground(CWnd* wnd)
+{
+  CWnd* parent = wnd->GetParent();
+  if (parent->IsKindOf(RUNTIME_CLASS(DarkModePropertyPage)))
+    return DarkMode::Back;
+  else if (parent->IsKindOf(RUNTIME_CLASS(CFormView)))
+    return DarkMode::Back;
+  return DarkMode::Darkest;
 }
 
 // Dark mode controls: DarkModeButton
@@ -269,7 +331,7 @@ void DarkModeButton::OnCustomDraw(NMHDR* nmhdr, LRESULT* result)
           border = DarkMode::Dark3;
           text = DarkMode::Dark3;
         }
-        dark->DrawBorder(dc,r,border,fill);
+        dark->DrawButtonBorder(dc,r,border,dark->GetBackground(this),fill);
 
         CString label;
         GetWindowText(label);
@@ -310,7 +372,6 @@ END_MESSAGE_MAP()
 
 struct DarkModeCheckButton::Impl
 {
-  DarkMode::DarkColour back = DarkMode::Back;
   int border = 0;
   ImagePNG check;
 };
@@ -325,12 +386,10 @@ DarkModeCheckButton::~DarkModeCheckButton()
   delete m_impl;
 }
 
-BOOL DarkModeCheckButton::SubclassDlgItem(UINT id, CWnd* parent, UINT imageId, DarkMode::DarkColour back)
+BOOL DarkModeCheckButton::SubclassDlgItem(UINT id, CWnd* parent, UINT imageId)
 {
   if (CWnd::SubclassDlgItem(id,parent))
   {
-    m_impl->back = back;
-
     ImagePNG img;
     if (img.LoadResource(imageId))
     {
@@ -368,21 +427,23 @@ void DarkModeCheckButton::OnCustomDraw(NMHDR* nmhdr, LRESULT* result)
     case CDDS_PREPAINT:
       *result = CDRF_SKIPDEFAULT;
       {
-        dc->FillSolidRect(r,dark->GetColour(m_impl->back));
+        // Cleat the client area of the control
+        DarkMode::DarkColour back = dark->GetBackground(this);
+        dc->FillSolidRect(r,dark->GetColour(back));
 
         // Get the the size of the check box
         int btnSize = m_impl->check.Size().cy + (2 * m_impl->border);
         int btnY = (r.Height()-btnSize)/2;
 
         // Get the colours for drawing
-        DarkMode::DarkColour back = m_impl->back;
         DarkMode::DarkColour fore = DarkMode::Dark1;
+        DarkMode::DarkColour fill = back;
         if (nmcd->uItemState & CDIS_HOT)
           fore = DarkMode::Fore;
         if (nmcd->uItemState & CDIS_SELECTED)
         {
           fore = DarkMode::Fore;
-          back = DarkMode::Dark3;
+          fill = DarkMode::Dark3;
         }
         if (nmcd->uItemState & CDIS_DISABLED)
           fore = DarkMode::Dark3;
@@ -390,7 +451,7 @@ void DarkModeCheckButton::OnCustomDraw(NMHDR* nmhdr, LRESULT* result)
         // Draw the border and background of the button
         CRect btnR(r.TopLeft(),CSize(btnSize,btnSize));
         btnR.OffsetRect(0,btnY);
-        dark->DrawBorder(dc,btnR,fore,back);
+        dark->DrawBorder(dc,btnR,fore,fill);
 
         // Draw the check, if needed
         if (GetCheck() == BST_CHECKED)
@@ -398,7 +459,7 @@ void DarkModeCheckButton::OnCustomDraw(NMHDR* nmhdr, LRESULT* result)
           ImagePNG image;
           image.Copy(m_impl->check);
           image.Fill(dark->GetColour(fore));
-          image.Blend(dark->GetColour(back));
+          image.Blend(dark->GetColour(fill));
           image.Draw(dc,btnR.TopLeft()+CPoint(m_impl->border,m_impl->border));
         }
 
@@ -834,7 +895,6 @@ END_MESSAGE_MAP()
 
 struct DarkModeRadioButton::Impl
 {
-  DarkMode::DarkColour back = DarkMode::Back;
   ImagePNG radio;
 
   void DrawRadio(ImagePNG& image, int radioIndex, COLORREF colour)
@@ -883,12 +943,10 @@ DarkModeRadioButton::~DarkModeRadioButton()
   delete m_impl;
 }
 
-BOOL DarkModeRadioButton::SubclassDlgItem(UINT id, CWnd* parent, UINT imageId, DarkMode::DarkColour back)
+BOOL DarkModeRadioButton::SubclassDlgItem(UINT id, CWnd* parent, UINT imageId)
 {
   if (CWnd::SubclassDlgItem(id,parent))
   {
-    m_impl->back = back;
-
     ImagePNG img;
     if (img.LoadResource(imageId))
     {
@@ -930,7 +988,7 @@ void DarkModeRadioButton::OnCustomDraw(NMHDR* nmhdr, LRESULT* result)
         int btnY = (r.Height()-btnSize)/2;
 
         // Get the colours for drawing
-        DarkMode::DarkColour back = m_impl->back;
+        DarkMode::DarkColour back = dark->GetBackground(this);
         DarkMode::DarkColour fore = DarkMode::Dark1;
         if (nmcd->uItemState & CDIS_HOT)
           fore = DarkMode::Fore;
