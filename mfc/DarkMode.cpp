@@ -38,10 +38,6 @@ DarkMode::DarkMode()
   m_colours[Dark3]   = RGB(0x40,0x40,0x40);
   m_colours[Darkest] = RGB(0x20,0x20,0x20);
   m_colours[No_Colour] = 0;
-
-  // Dark mode appearance changes for Windows 11
-  if (CheckWindowsVersion(11,0,0))
-    rounded = true;
 }
 
 bool DarkMode::IsEnabled(const char* path)
@@ -203,7 +199,7 @@ CBrush* DarkMode::GetBrush(DarkColour colour)
   return &brush;
 }
 
-void DarkMode::DrawBorder(CDC* dc, const CRect& r, DarkColour border, DarkColour fill)
+void DarkMode::DrawRectangleBorder(CDC* dc, const CRect& r, DarkColour border, DarkColour fill)
 {
   CPen pen;
   pen.CreatePen(PS_SOLID,1,GetColour(border));
@@ -215,11 +211,40 @@ void DarkMode::DrawBorder(CDC* dc, const CRect& r, DarkColour border, DarkColour
   dc->SelectObject(oldBrush);
 }
 
+void DarkMode::DrawControlBorder(CDC* dc, const CRect& r, DarkColour border, DarkColour back, DarkColour fill)
+{
+  DrawRectangleBorder(dc,r,border,fill);
+
+  // Slightly rounded corners for Windows 11
+  if (CheckWindowsVersion(11,0,0))
+  {
+    BYTE i1 = GetRValue(GetColour(border));
+    BYTE i2 = GetRValue(GetColour(back));
+    BYTE i3 = GetRValue(GetColour(fill));
+
+    auto DrawRound=[&](int x, int y, int xs, int ys)
+    {
+      double f = 0.33;
+      BYTE i = (BYTE)((i1*f)+(i2*(1.0-f)));
+      dc->SetPixel(x,y,RGB(i,i,i));
+      f = 0.18;
+      i = (BYTE)((i1*f)+(i3*(1.0-f)));
+      dc->SetPixel(x+xs,y+ys,RGB(i,i,i));
+    };
+
+    DrawRound(r.left,r.top,1,1);
+    DrawRound(r.right-1,r.top,-1,1);
+    DrawRound(r.left,r.bottom-1,1,-1);
+    DrawRound(r.right-1,r.bottom-1,-1,-1);
+  }
+}
+
 void DarkMode::DrawButtonBorder(CDC* dc, const CRect& r, DarkColour border, DarkColour back, DarkColour fill)
 {
-  DrawBorder(dc,r,border,fill);
+  DrawRectangleBorder(dc,r,border,fill);
 
-  if (rounded)
+  // Rounded corners for Windows 11
+  if (CheckWindowsVersion(11,0,0))
   {
     BYTE i1 = GetRValue(GetColour(border));
     BYTE i2 = GetRValue(GetColour(back));
@@ -252,10 +277,8 @@ void DarkMode::DrawButtonBorder(CDC* dc, const CRect& r, DarkColour border, Dark
   }
 }
 
-void DarkMode::DrawNonClientBorder(CWnd* wnd, DarkColour border, DarkColour fill)
+CRect DarkMode::PrepareNonClientBorder(CWnd* wnd, CWindowDC& dc)
 {
-  CWindowDC dc(wnd);
-
   // Get the window and client rectangles, in the window co-ordinate space
   CRect rw, rc;
   wnd->GetWindowRect(rw);
@@ -268,11 +291,8 @@ void DarkMode::DrawNonClientBorder(CWnd* wnd, DarkColour border, DarkColour fill
   dc.ExcludeClipRect(rc);
   dc.IntersectClipRect(rw);
 
-  // Draw the non-client border
-  DrawBorder(&dc,rw,border,fill);
-
-  // Reset the clipping region
-  dc.SelectClipRgn(NULL);
+  // Return the rectangle to draw into
+  return rw;
 }
 
 bool DarkMode::CursorInRect(CWnd* wnd, CRect r)
@@ -451,7 +471,7 @@ void DarkModeCheckButton::OnCustomDraw(NMHDR* nmhdr, LRESULT* result)
         // Draw the border and background of the button
         CRect btnR(r.TopLeft(),CSize(btnSize,btnSize));
         btnR.OffsetRect(0,btnY);
-        dark->DrawBorder(dc,btnR,fore,fill);
+        dark->DrawControlBorder(dc,btnR,fore,dark->GetBackground(this),fill);
 
         // Draw the check, if needed
         if (GetCheck() == BST_CHECKED)
@@ -566,7 +586,7 @@ void DarkModeComboBox::OnPaint()
     }
 
     // Draw the border and background
-    dark->DrawBorder(&dc,r,border,fill);
+    dark->DrawControlBorder(&dc,r,border,dark->GetBackground(this),fill);
 
     // Draw the dropdown arrow
     CPen arrowPen;
@@ -662,9 +682,12 @@ void DarkModeEdit::OnNcPaint()
   DarkMode* dark = DarkMode::GetActive(this);
   if (dark)
   {
+    CWindowDC dc(this);
     DarkMode::DarkColour border =
       (CWnd::GetFocus() == this) ? DarkMode::Dark1 : DarkMode::Dark2;
-    dark->DrawNonClientBorder(this,border,DarkMode::Darkest);
+    CRect r = dark->PrepareNonClientBorder(this,dc);
+    dark->DrawControlBorder(&dc,r,border,dark->GetBackground(this),DarkMode::Darkest);
+    dc.SelectClipRgn(NULL);
   }
   else
     Default();
@@ -690,7 +713,7 @@ void DarkModeGroupBox::OnPaint()
     dc.GetTextMetrics(&metrics);
 
     r.top += metrics.tmHeight/2;
-    dark->DrawBorder(&dc,r,DarkMode::Dark2,DarkMode::No_Colour);
+    dark->DrawRectangleBorder(&dc,r,DarkMode::Dark2,DarkMode::No_Colour);
     r.top -= metrics.tmHeight/2;
 
     CString label;
@@ -752,7 +775,7 @@ void DarkModeListBox::OnNcPaint()
     dc.IntersectClipRect(rw);
     DarkMode::DarkColour border =
       (CWnd::GetFocus() == this) ? DarkMode::Dark1 : DarkMode::Dark2;
-    dark->DrawBorder(&dc,rw,border,DarkMode::Darkest);
+    dark->DrawControlBorder(&dc,rw,border,dark->GetBackground(this),DarkMode::Darkest);
     dc.SelectClipRgn(NULL);
   }
   else
@@ -784,7 +807,12 @@ void DarkModeProgressCtrl::OnNcPaint()
 {
   DarkMode* dark = DarkMode::GetActive(this);
   if (dark)
-    dark->DrawNonClientBorder(this,DarkMode::Dark3,DarkMode::Darkest);
+  {
+    CWindowDC dc(this);
+    CRect r = dark->PrepareNonClientBorder(this,dc);
+    dark->DrawRectangleBorder(&dc,r,DarkMode::Dark3,DarkMode::Darkest);
+    dc.SelectClipRgn(NULL);
+  }
   else
     Default();
 }
@@ -1080,7 +1108,7 @@ void DarkModeSliderCtrl::OnCustomDraw(NMHDR* nmhdr, LRESULT* result)
         // Draw the slider channel
         CRect cr;
         GetChannelRect(cr);
-        dark->DrawBorder(dc,cr,DarkMode::Dark3,DarkMode::Darkest);
+        dark->DrawRectangleBorder(dc,cr,DarkMode::Dark3,DarkMode::Darkest);
 
         // Draw the slider thumb
         CRect tr;
@@ -1221,7 +1249,7 @@ void DarkModeTabCtrl::OnPaint()
 
     dc.FillSolidRect(r,dark->GetColour(DarkMode::Darkest));
     r.top = y;
-    dark->DrawBorder(&dc,r,DarkMode::Dark2,DarkMode::Back);
+    dark->DrawRectangleBorder(&dc,r,DarkMode::Dark2,DarkMode::Back);
 
     int sel = GetCurSel();
     for (int i = 0; i < GetItemCount(); i++)

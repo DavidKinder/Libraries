@@ -33,18 +33,17 @@ public:
   COLORREF GetColour(DarkColour colour);
   CBrush* GetBrush(DarkColour colour);
 
-  void DrawBorder(CDC* dc, const CRect& r, DarkColour border, DarkColour fill);
+  void DrawRectangleBorder(CDC* dc, const CRect& r, DarkColour border, DarkColour fill);
+  void DrawControlBorder(CDC* dc, const CRect& r, DarkColour border, DarkColour back, DarkColour fill);
   void DrawButtonBorder(CDC* dc, const CRect& r, DarkColour border, DarkColour back, DarkColour fill);
-  void DrawNonClientBorder(CWnd* wnd, DarkColour colour, DarkColour fill);
 
+  CRect PrepareNonClientBorder(CWnd* wnd, CWindowDC& dc);
   bool CursorInRect(CWnd* wnd, CRect r);
   DarkColour GetBackground(CWnd* wnd);
 
 protected:
   COLORREF m_colours[Number_Colours];
   CBrush m_brushes[Number_Colours];
-
-  bool rounded = false;
 };
 
 class DarkModeButton : public CButton
