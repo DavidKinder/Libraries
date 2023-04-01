@@ -33,9 +33,10 @@ public:
   COLORREF GetColour(DarkColour colour);
   CBrush* GetBrush(DarkColour colour);
 
-  void DrawRectangleBorder(CDC* dc, const CRect& r, DarkColour border, DarkColour fill);
+  void DrawRectangle(CDC* dc, const CRect& r, DarkColour border, DarkColour fill);
   void DrawControlBorder(CDC* dc, const CRect& r, DarkColour border, DarkColour back, DarkColour fill);
   void DrawButtonBorder(CDC* dc, const CRect& r, DarkColour border, DarkColour back, DarkColour fill);
+  void DrawEditBorder(CDC* dc, const CRect& r, DarkColour border, DarkColour back, DarkColour fill, bool focus);
 
   CRect PrepareNonClientBorder(CWnd* wnd, CWindowDC& dc);
   bool CursorInRect(CWnd* wnd, CRect r);
