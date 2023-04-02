@@ -216,7 +216,7 @@ void DarkMode::DrawControlBorder(CDC* dc, const CRect& r, DarkColour border, Dar
   DrawRectangle(dc,r,border,fill);
 
   // Slightly rounded corners for Windows 11
-  if (CheckWindowsVersion(11,0,0))
+  if (CheckWindowsVersion(10,0,22000))
   {
     BYTE i1 = GetRValue(GetColour(border));
     BYTE i2 = GetRValue(GetColour(back));
@@ -244,7 +244,7 @@ void DarkMode::DrawButtonBorder(CDC* dc, const CRect& r, DarkColour border, Dark
   DrawRectangle(dc,r,border,fill);
 
   // Rounded corners for Windows 11
-  if (CheckWindowsVersion(11,0,0))
+  if (CheckWindowsVersion(10,0,22000))
   {
     BYTE i1 = GetRValue(GetColour(border));
     BYTE i2 = GetRValue(GetColour(back));
@@ -282,7 +282,7 @@ void DarkMode::DrawEditBorder(CDC* dc, const CRect& r, DarkColour border, DarkCo
   DrawControlBorder(dc,r,border,back,fill);
 
   // Emphasis on the bottom border for Windows 11
-  if (focus && CheckWindowsVersion(11,0,0))
+  if (focus && CheckWindowsVersion(10,0,22000))
   {
     CPen emphasisPen;
     emphasisPen.CreatePen(PS_SOLID,1,GetColour(DarkMode::Fore));
