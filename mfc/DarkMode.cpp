@@ -108,10 +108,7 @@ void DarkMode::SetAppDarkMode(void)
       SETPREFERREDAPPMODE SetPreferredAppMode =
         (SETPREFERREDAPPMODE)::GetProcAddress(uxtheme,MAKEINTRESOURCE(135));
       if (SetPreferredAppMode)
-      {
-        int result = (*SetPreferredAppMode)(1);
-        printf("%d\n",result);
-      }
+        (*SetPreferredAppMode)(1);
       ::FreeLibrary(uxtheme);
     }
   }
