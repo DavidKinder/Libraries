@@ -114,17 +114,29 @@ void DarkMode::SetAppDarkMode(void)
   }
 }
 
+void DarkMode::SetDarkTitle(CWnd* wnd, BOOL dark)
+{
+  HMODULE dwm = ::LoadLibrary("dwmapi.dll");
+  if (dwm != 0)
+  {
+    typedef HRESULT(__stdcall *DWMSETWINDOWATTRIBUTE)(HWND,DWORD,LPCVOID,DWORD);
+    DWMSETWINDOWATTRIBUTE DwmSetWindowAttribute =
+      (DWMSETWINDOWATTRIBUTE)::GetProcAddress(dwm,"DwmSetWindowAttribute");
+    if (DwmSetWindowAttribute)
+      (*DwmSetWindowAttribute)(wnd->GetSafeHwnd(),DWMWA_USE_IMMERSIVE_DARK_MODE,&dark,sizeof dark);
+    ::FreeLibrary(dwm);
+  }
+}
+
 void DarkMode::Set(CFrameWnd* frame, DarkMode* dark)
 {
-  BOOL darkTitle = (dark != NULL);
-  ::DwmSetWindowAttribute(frame->GetSafeHwnd(),DWMWA_USE_IMMERSIVE_DARK_MODE,&darkTitle,sizeof darkTitle);
+  SetDarkTitle(frame,dark != NULL);
   frame->RedrawWindow(NULL,NULL,RDW_ERASE|RDW_INVALIDATE|RDW_ALLCHILDREN);
 }
 
 void DarkMode::Set(CDialog* dlg, DarkMode* dark)
 {
-  BOOL darkTitle = (dark != NULL);
-  ::DwmSetWindowAttribute(dlg->GetSafeHwnd(),DWMWA_USE_IMMERSIVE_DARK_MODE,&darkTitle,sizeof darkTitle);
+  SetDarkTitle(dlg,dark != NULL);
   dlg->RedrawWindow(NULL,NULL,RDW_ERASE|RDW_INVALIDATE|RDW_ALLCHILDREN);
 }
 
@@ -916,8 +928,7 @@ void DarkModePropertySheet::SetDarkMode(DarkMode* dark, bool init)
 {
   if (GetSafeHwnd() != 0)
   {
-    BOOL darkTitle = (dark != NULL);
-    ::DwmSetWindowAttribute(GetSafeHwnd(),DWMWA_USE_IMMERSIVE_DARK_MODE,&darkTitle,sizeof darkTitle);
+    DarkMode::SetDarkTitle(this,dark != NULL);
 
     for (int i = 0; i < GetPageCount(); i++)
     {

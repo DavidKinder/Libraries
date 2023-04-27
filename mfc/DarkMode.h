@@ -12,6 +12,7 @@ public:
   static DarkMode* GetActive(CWnd* wnd);
 
   static void SetAppDarkMode(void);
+  static void SetDarkTitle(CWnd* wnd, BOOL dark);
   static void Set(CFrameWnd* frame, DarkMode* dark);
   static void Set(CDialog* dlg, DarkMode* dark);
   static void Set(CReBar* bar, DarkMode* dark);
