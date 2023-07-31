@@ -1298,3 +1298,21 @@ bool MenuBarFrameWnd::Settings::operator!=(const Settings& set) const
     return true;
   return false;
 }
+
+CMenu* GetSubMenu(CMenu* menu, int pos, LPCSTR expect)
+{
+  ASSERT(menu);
+
+#ifdef _DEBUG
+  {
+    CString menuText;
+    menu->GetMenuString(pos,menuText,MF_BYPOSITION);
+    menuText.Remove('&');
+    ASSERT(menuText == expect);
+  }
+#endif
+
+  CMenu* sub = menu->GetSubMenu(pos);
+  ASSERT(sub != NULL);
+  return sub;
+}

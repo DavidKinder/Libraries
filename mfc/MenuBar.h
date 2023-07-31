@@ -164,3 +164,5 @@ protected:
   Settings m_settings;
   DarkMode* m_dark;
 };
+
+CMenu* GetSubMenu(CMenu* menu, int pos, LPCSTR expect);
