@@ -246,7 +246,7 @@ INT_PTR SimpleFileDialog::DoModal()
     m_ofn.Flags &= ~OFN_ENABLEHOOK;
 
   DWORD nOffset = lstrlen(m_ofn.lpstrFile)+1;
-  memset(m_ofn.lpstrFile+nOffset, 0, (m_ofn.nMaxFile-nOffset)*sizeof(TCHAR));
+  memset(m_ofn.lpstrFile+nOffset,0,(m_ofn.nMaxFile-nOffset)*sizeof(TCHAR));
 
   HWND hWndFocus = ::GetFocus();
   BOOL bEnableParent = FALSE;
