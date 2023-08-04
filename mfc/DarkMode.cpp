@@ -333,12 +333,16 @@ bool DarkMode::CursorInRect(CWnd* wnd, CRect r)
 DarkMode::DarkColour DarkMode::GetBackground(CWnd* wnd)
 {
   CWnd* parent = wnd->GetParent();
-  if (parent->IsKindOf(RUNTIME_CLASS(DarkModePropertyPage)))
+  if (parent->IsKindOf(RUNTIME_CLASS(DarkModeParentWnd)))
+    return ((DarkModeParentWnd*)parent)->GetDarkBackground();
+  else if (parent->IsKindOf(RUNTIME_CLASS(DarkModePropertyPage)))
     return DarkMode::Back;
   else if (parent->IsKindOf(RUNTIME_CLASS(CFormView)))
     return DarkMode::Back;
   return DarkMode::Darkest;
 }
+
+IMPLEMENT_DYNAMIC(DarkModeParentWnd, CWnd)
 
 // Dark mode controls: DarkModeButton
 

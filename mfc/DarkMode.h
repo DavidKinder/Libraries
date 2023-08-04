@@ -48,6 +48,14 @@ protected:
   CBrush m_brushes[Number_Colours];
 };
 
+class DarkModeParentWnd : public CWnd
+{
+  DECLARE_DYNAMIC(DarkModeParentWnd)
+
+public:
+  virtual DarkMode::DarkColour GetDarkBackground(void) = 0;
+};
+
 class DarkModeButton : public CButton
 {
 protected:
