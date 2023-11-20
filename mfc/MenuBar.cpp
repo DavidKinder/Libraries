@@ -953,46 +953,14 @@ MenuBarFrameWnd::~MenuBarFrameWnd()
 
 void MenuBarFrameWnd::UpdateDPI(int dpi)
 {
-  m_settings = Settings(dpi);
-
-  // Resize the toolbar
-  ImagePNG normalImage, disabledImage;
-  if (m_toolBar.GetSafeHwnd() != 0)
-  {
-    if (m_image.Pixels())
-    {
-      CSize scaledSize(m_settings.sizeImage);
-      scaledSize.cx *= m_toolBar.GetCount();
-      normalImage.Scale(m_image,scaledSize);
-      disabledImage.Copy(normalImage);
-
-      normalImage.Fill(m_settings.colourFore);
-      disabledImage.Fill(m_settings.colourDisable);
-    }
-    if (normalImage.Pixels() && disabledImage.Pixels())
-    {
-      m_toolBar.SetSizes(m_settings.sizeButton,m_settings.sizeImage);
-      LoadBitmaps(normalImage,disabledImage);
-    }
-  }
-
-  // Resize the menu bar
-  if (m_menuBar.GetSafeHwnd() != 0)
-  {
-    if (normalImage.Pixels())
-    {
-      ASSERT(m_toolBar.GetSafeHwnd() != 0);
-      m_menuBar.DeleteBitmaps();
-      m_menuBar.LoadBitmaps(normalImage,m_toolBar.GetToolBarCtrl(),m_settings.sizeImage);
-    }
-    m_menuBar.UpdateFont(dpi);
-    m_menuBar.Update();
-  }
+  m_settings = Settings(dpi,m_dark);
+  UpdateBars(dpi);
   SetBarSizes();
 }
 
 void MenuBarFrameWnd::SetDarkMode(DarkMode* dark)
 {
+  bool change = (m_dark != dark);
   if (m_dark)
     delete m_dark;
   m_dark = dark;
@@ -1003,11 +971,19 @@ void MenuBarFrameWnd::SetDarkMode(DarkMode* dark)
     DarkMode::Set(&m_menuBar,&m_coolBar,m_menuBarIndex,dark);
   if (m_toolBar.GetSafeHwnd() != 0)
     DarkMode::Set(&m_toolBar,&m_coolBar,m_toolBarIndex,dark);
+
+  // If the dark mode has changed, force all bitmaps to update
+  if (change)
+  {
+    int dpi = DPI::getWindowDPI(this);
+    m_settings = Settings(dpi,m_dark);
+    UpdateBars(dpi);
+  }
 }
 
 int MenuBarFrameWnd::OnCreate(LPCREATESTRUCT lpCreateStruct)
 {
-  m_settings = Settings(DPI::getWindowDPI(this));
+  m_settings = Settings(DPI::getWindowDPI(this),m_dark);
   return CFrameWnd::OnCreate(lpCreateStruct);
 }
 
@@ -1027,7 +1003,7 @@ void MenuBarFrameWnd::OnSettingChange(UINT uiAction, LPCTSTR lpszSection)
   CFrameWnd::OnSettingChange(uiAction,lpszSection);
 
   int dpi = DPI::getWindowDPI(this);
-  if (m_settings != Settings(dpi))
+  if (m_settings != Settings(dpi,m_dark))
     UpdateDPI(dpi);
 }
 
@@ -1147,7 +1123,7 @@ BOOL MenuBarFrameWnd::CreateNewBar(UINT id, UINT imageId)
     return FALSE;
 
   // Scale sizes for the DPI
-  m_settings = Settings(DPI::getWindowDPI(this));
+  m_settings = Settings(DPI::getWindowDPI(this),m_dark);
   m_toolBar.SetSizes(m_settings.sizeButton,m_settings.sizeImage);
 
   // Load the image bitmap
@@ -1247,6 +1223,43 @@ void MenuBarFrameWnd::SetBarSizes(void)
     m_coolBar.GetReBarCtrl().MinimizeBand(m_menuBarIndex);
 }
 
+void MenuBarFrameWnd::UpdateBars(int dpi)
+{
+  // Resize the toolbar
+  ImagePNG normalImage, disabledImage;
+  if (m_toolBar.GetSafeHwnd() != 0)
+  {
+    if (m_image.Pixels())
+    {
+      CSize scaledSize(m_settings.sizeImage);
+      scaledSize.cx *= m_toolBar.GetCount();
+      normalImage.Scale(m_image,scaledSize);
+      disabledImage.Copy(normalImage);
+
+      normalImage.Fill(m_settings.colourFore);
+      disabledImage.Fill(m_settings.colourDisable);
+    }
+    if (normalImage.Pixels() && disabledImage.Pixels())
+    {
+      m_toolBar.SetSizes(m_settings.sizeButton,m_settings.sizeImage);
+      LoadBitmaps(normalImage,disabledImage);
+    }
+  }
+
+  // Resize the menu bar
+  if (m_menuBar.GetSafeHwnd() != 0)
+  {
+    if (normalImage.Pixels())
+    {
+      ASSERT(m_toolBar.GetSafeHwnd() != 0);
+      m_menuBar.DeleteBitmaps();
+      m_menuBar.LoadBitmaps(normalImage,m_toolBar.GetToolBarCtrl(),m_settings.sizeImage);
+    }
+    m_menuBar.UpdateFont(dpi);
+    m_menuBar.Update();
+  }
+}
+
 MenuBarFrameWnd::Settings::Settings()
 {
   menuY = 0;
@@ -1255,7 +1268,7 @@ MenuBarFrameWnd::Settings::Settings()
   colourDisable = 0;
 }
 
-MenuBarFrameWnd::Settings::Settings(int dpi)
+MenuBarFrameWnd::Settings::Settings(int dpi, DarkMode* dark)
 {
   menuY = DPI::getSystemMetrics(SM_CYMENU,dpi);
   CFont font;
@@ -1276,10 +1289,10 @@ MenuBarFrameWnd::Settings::Settings(int dpi)
   sizeButton.cy = (sizeImage.cy*3)/2;
 
   // Replace black with dark grey
-  colourFore = ::GetSysColor(COLOR_BTNTEXT);
+  colourFore = dark ? dark->GetColour(DarkMode::Fore) : ::GetSysColor(COLOR_BTNTEXT);
   if (colourFore == RGB(0,0,0))
     colourFore = RGB(64,64,64);
-  colourDisable = ::GetSysColor(COLOR_GRAYTEXT);
+  colourDisable = dark ? dark->GetColour(DarkMode::Dark2) : ::GetSysColor(COLOR_GRAYTEXT);
 }
 
 bool MenuBarFrameWnd::Settings::operator!=(const Settings& set) const

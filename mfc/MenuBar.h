@@ -89,7 +89,7 @@ protected:
   CPoint m_mouse;
 };
 
-class BitmapToolBar : public CToolBar
+class BitmapToolBar : public DarkModeToolBar
 {
 public:
   BitmapToolBar()
@@ -134,6 +134,7 @@ protected:
   CMenu* GetMenu(void) const;
   void LoadBitmap(CBitmap& bitmap, UINT id);
   void SetBarSizes(void);
+  void UpdateBars(int dpi);
 
   BOOL CreateNewBar(UINT id, UINT imageId);
   void LoadBitmaps(ImagePNG& normal, ImagePNG& disabled);
@@ -157,7 +158,7 @@ protected:
     COLORREF colourDisable;
 
     Settings();
-    Settings(int dpi);
+    Settings(int dpi, DarkMode* dark);
     bool operator!=(const Settings& set) const;
   };
 
