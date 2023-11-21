@@ -1,5 +1,7 @@
 #include "stdafx.h"
 #include "DarkMode.h"
+
+#include "DpiFunctions.h"
 #include "ImagePNG.h"
 
 #ifdef _DEBUG
@@ -1254,6 +1256,70 @@ void DarkModeStatic::OnEnable(BOOL bEnable)
   // Changing the enabled state will cause the internal painting logic
   // of the control to be called directly, so here we force a redraw.
   RedrawWindow(NULL,NULL,RDW_INVALIDATE|RDW_UPDATENOW);
+}
+
+// Dark mode controls: DarkModeStatusBar
+
+BEGIN_MESSAGE_MAP(DarkModeStatusBar, CStatusBar)
+  ON_WM_PAINT()
+END_MESSAGE_MAP()
+
+void DarkModeStatusBar::OnPaint()
+{
+  UpdateAllPanes(FALSE,TRUE);
+
+  DarkMode* dark = DarkMode::GetActive(this);
+  if (dark)
+  {
+    CRect r;
+    GetClientRect(r);
+    CPaintDC dc(this);
+    dc.FillSolidRect(r,dark->GetColour(DarkMode::Darkest));
+
+    CPen pen;
+    pen.CreatePen(PS_SOLID,1,dark->GetColour(DarkMode::Dark2));
+    CPen* oldPen = dc.SelectObject(&pen);
+
+    dc.SetTextColor(dark->GetColour(DarkMode::Fore));
+    dc.SetBkMode(TRANSPARENT);
+    CFont* oldFont = dc.SelectObject(GetFont());
+
+    for (int i = 0; i < GetCount(); i++)
+    {
+      CRect ir;
+      GetItemRect(i,ir);
+      ir.left += m_cxDefaultGap;
+
+      UINT style = GetPaneStyle(i);
+      if (!(style & SBPS_STRETCH))
+      {
+        dc.MoveTo(ir.right-1,ir.top);
+        dc.LineTo(ir.right-1,ir.bottom-1);
+        ir.right -= m_cxDefaultGap;
+      }
+      if (!(style & SBPS_DISABLED))
+        dc.DrawText(GetPaneText(i),ir,DT_SINGLELINE);
+    }
+
+    if (::IsAppThemed())
+    {
+      HTHEME theme = ::OpenThemeData(GetSafeHwnd(),L"Status");
+      if (theme)
+      {
+        CRect gripRect(r);
+        int dpi = DPI::getWindowDPI(this);
+        gripRect.left = gripRect.right - DPI::getSystemMetrics(SM_CXHSCROLL,dpi);
+        gripRect.top = gripRect.bottom - DPI::getSystemMetrics(SM_CYVSCROLL,dpi);
+        ::DrawThemeBackground(theme,dc.GetSafeHdc(),SP_GRIPPER,0,gripRect,NULL);
+        ::CloseThemeData(theme);
+      }
+    }
+
+    dc.SelectObject(oldFont);
+    dc.SelectObject(oldPen);
+  }
+  else
+    Default();
 }
 
 // Dark mode controls: DarkModeTabCtrl

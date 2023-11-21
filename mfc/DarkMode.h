@@ -212,6 +212,13 @@ protected:
   DECLARE_MESSAGE_MAP()
 };
 
+class DarkModeStatusBar : public CStatusBar
+{
+protected:
+  afx_msg void OnPaint();
+  DECLARE_MESSAGE_MAP()
+};
+
 class DarkModeToolBar : public CToolBar
 {
 protected:
