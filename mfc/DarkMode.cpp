@@ -902,6 +902,10 @@ BEGIN_MESSAGE_MAP(DarkModePropertySheet, CPropertySheet)
   ON_WM_ERASEBKGND()
 END_MESSAGE_MAP()
 
+DarkModePropertySheet::DarkModePropertySheet(UINT caption, CWnd* parent) : CPropertySheet(caption,parent)
+{
+}
+
 DarkModePropertySheet::DarkModePropertySheet(LPCSTR caption) : CPropertySheet(caption)
 {
 }
@@ -1157,23 +1161,26 @@ void DarkModeSliderCtrl::OnCustomDraw(NMHDR* nmhdr, LRESULT* result)
         dc->FillSolidRect(tr,dark->GetColour(thumb));
 
         // Draw slider ticks
-        CPen tickPen;
-        tickPen.CreatePen(PS_SOLID,2,dark->GetColour(DarkMode::Dark2));
-        CPen* oldPen = dc->SelectObject(&tickPen);
-        int y = tr.bottom+1;
-        int x = cr.left + (tr.Width()/2);
-        dc->MoveTo(x,y);
-        dc->LineTo(x,y+8);
-        for (UINT i = 0; i < GetNumTics(); i++)
+        if ((GetStyle() & TBS_NOTICKS) == 0)
         {
-          x = GetTicPos(i);
+          CPen tickPen;
+          tickPen.CreatePen(PS_SOLID,2,dark->GetColour(DarkMode::Dark2));
+          CPen* oldPen = dc->SelectObject(&tickPen);
+          int y = tr.bottom+1;
+          int x = cr.left + (tr.Width()/2);
           dc->MoveTo(x,y);
           dc->LineTo(x,y+8);
+          for (UINT i = 0; i < GetNumTics(); i++)
+          {
+            x = GetTicPos(i);
+            dc->MoveTo(x,y);
+            dc->LineTo(x,y+8);
+          }
+          x = cr.right - (tr.Width()/2);
+          dc->MoveTo(x,y);
+          dc->LineTo(x,y+8);
+          dc->SelectObject(oldPen);
         }
-        x = cr.right - (tr.Width()/2);
-        dc->MoveTo(x,y);
-        dc->LineTo(x,y+8);
-        dc->SelectObject(oldPen);
 
         // Draw a focus rectangle
         if (CWnd::GetFocus() == this)

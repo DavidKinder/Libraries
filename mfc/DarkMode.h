@@ -165,6 +165,7 @@ class DarkModePropertySheet : public CPropertySheet
   DECLARE_DYNAMIC(DarkModePropertySheet)
 
 public:
+  explicit DarkModePropertySheet(UINT caption, CWnd* parent);
   explicit DarkModePropertySheet(LPCSTR caption);
   virtual void SetDarkMode(DarkMode* dark, bool init);
 
