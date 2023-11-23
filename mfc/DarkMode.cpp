@@ -1117,6 +1117,64 @@ void DarkModeRadioButton::OnCustomDraw(NMHDR* nmhdr, LRESULT* result)
   }
 }
 
+// Dark mode controls: DarkModeRichEditCtrl
+
+BEGIN_MESSAGE_MAP(DarkModeRichEditCtrl, CRichEditCtrl)
+  ON_WM_NCPAINT()
+END_MESSAGE_MAP()
+
+void DarkModeRichEditCtrl::SetDarkMode(DarkMode* dark)
+{
+  LPCWSTR theme = dark ? L"DarkMode_Explorer" : NULL;
+  ::SetWindowTheme(GetSafeHwnd(),theme,NULL);
+
+  CHARFORMAT format = { 0 };
+  format.cbSize = sizeof format;
+  format.dwMask = CFM_COLOR;
+  if (dark)
+  {
+    format.crTextColor = dark->GetColour(DarkMode::Fore);
+    SetBackgroundColor(FALSE,dark->GetColour(DarkMode::Back));
+  }
+  else
+  {
+    format.crTextColor = ::GetSysColor(COLOR_BTNTEXT);
+    SetBackgroundColor(FALSE,GetSysColor(COLOR_3DFACE));
+  }
+  SetDefaultCharFormat(format);
+}
+
+void DarkModeRichEditCtrl::OnNcPaint()
+{
+  Default();
+
+  DarkMode* dark = DarkMode::GetActive(this);
+  if (dark)
+  {
+    CWindowDC dc(this);
+
+    // Get the window and client rectangles, in the window co-ordinate space
+    CRect rw, rc;
+    GetWindowRect(rw);
+    ScreenToClient(rw);
+    GetClientRect(rc);
+    rc.OffsetRect(-rw.TopLeft());
+    rw.OffsetRect(-rw.TopLeft());
+
+    // Account for the possibility of a scrollbar by making the right and bottom
+    // borders the same size as the top and left borders.
+    rc.right = rw.right - (rc.left - rw.left);
+    rc.bottom = rw.bottom - (rc.top - rw.top);
+
+    // Make the clipping region the window rectangle, excluding the client rectangle
+    dc.ExcludeClipRect(rc);
+    dc.IntersectClipRect(rw);
+
+    dark->DrawRectangle(&dc,rw,DarkMode::Dark3,DarkMode::Back);
+    dc.SelectClipRgn(NULL);
+  }
+}
+
 // Dark mode controls: DarkModeSliderCtrl
 
 BEGIN_MESSAGE_MAP(DarkModeSliderCtrl, CSliderCtrl)

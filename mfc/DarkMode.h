@@ -196,6 +196,16 @@ protected:
   Impl* m_impl;
 };
 
+class DarkModeRichEditCtrl : public CRichEditCtrl
+{
+public:
+  virtual void SetDarkMode(DarkMode* dark);
+
+protected:
+  afx_msg void OnNcPaint();
+  DECLARE_MESSAGE_MAP()
+};
+
 class DarkModeSliderCtrl : public CSliderCtrl
 {
 protected:
