@@ -198,8 +198,10 @@ protected:
 
 class DarkModeRichEditCtrl : public CRichEditCtrl
 {
+  DECLARE_DYNAMIC(DarkModeRichEditCtrl)
+
 public:
-  virtual void SetDarkMode(DarkMode* dark);
+  virtual void SetDarkMode(DarkMode* dark, DarkMode::DarkColour darkBackground);
 
 protected:
   afx_msg void OnNcPaint();

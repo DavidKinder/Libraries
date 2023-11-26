@@ -1119,11 +1119,13 @@ void DarkModeRadioButton::OnCustomDraw(NMHDR* nmhdr, LRESULT* result)
 
 // Dark mode controls: DarkModeRichEditCtrl
 
+IMPLEMENT_DYNAMIC(DarkModeRichEditCtrl, CRichEditCtrl)
+
 BEGIN_MESSAGE_MAP(DarkModeRichEditCtrl, CRichEditCtrl)
   ON_WM_NCPAINT()
 END_MESSAGE_MAP()
 
-void DarkModeRichEditCtrl::SetDarkMode(DarkMode* dark)
+void DarkModeRichEditCtrl::SetDarkMode(DarkMode* dark, DarkMode::DarkColour darkBackground)
 {
   LPCWSTR theme = dark ? L"DarkMode_Explorer" : NULL;
   ::SetWindowTheme(GetSafeHwnd(),theme,NULL);
@@ -1134,7 +1136,7 @@ void DarkModeRichEditCtrl::SetDarkMode(DarkMode* dark)
   if (dark)
   {
     format.crTextColor = dark->GetColour(DarkMode::Fore);
-    SetBackgroundColor(FALSE,dark->GetColour(DarkMode::Back));
+    SetBackgroundColor(FALSE,dark->GetColour(darkBackground));
   }
   else
   {
