@@ -103,9 +103,14 @@ class DarkModeEdit : public CEdit
 {
   DECLARE_DYNAMIC(DarkModeEdit)
 
+public:
+  void SetOverlapWnd(CWnd* overWnd);
+
 protected:
   afx_msg void OnNcPaint();
   DECLARE_MESSAGE_MAP()
+
+  CWnd* m_overlapWnd = NULL;
 };
 
 class DarkModeGroupBox : public CButton
@@ -214,6 +219,13 @@ protected:
   afx_msg void OnCustomDraw(NMHDR*, LRESULT*);
   afx_msg BOOL OnEraseBkgnd(CDC* pDC);
   afx_msg LRESULT OnSetPos(WPARAM, LPARAM);
+  DECLARE_MESSAGE_MAP()
+};
+
+class DarkModeSpinButtonCtrl : public CSpinButtonCtrl
+{
+protected:
+  afx_msg void OnPaint();
   DECLARE_MESSAGE_MAP()
 };
 

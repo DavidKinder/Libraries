@@ -710,16 +710,33 @@ BEGIN_MESSAGE_MAP(DarkModeEdit, CEdit)
   ON_WM_NCPAINT()
 END_MESSAGE_MAP()
 
+void DarkModeEdit::SetOverlapWnd(CWnd* overWnd)
+{
+  m_overlapWnd = overWnd;
+}
+
 void DarkModeEdit::OnNcPaint()
 {
   DarkMode* dark = DarkMode::GetActive(this);
   if (dark)
   {
     CWindowDC dc(this);
+    CRect r = dark->PrepareNonClientBorder(this,dc);
+
+    if (m_overlapWnd)
+    {
+      // Exclude the window rectangle over the overlapping window
+      CRect rw, ro;
+      GetWindowRect(rw);
+      m_overlapWnd->GetWindowRect(ro);
+      ro.OffsetRect(-rw.TopLeft());
+      dc.ExcludeClipRect(ro);
+    }
+
     bool focus = (CWnd::GetFocus() == this);
     DarkMode::DarkColour border = focus ? DarkMode::Dark1 : DarkMode::Dark2;
-    CRect r = dark->PrepareNonClientBorder(this,dc);
     dark->DrawEditBorder(&dc,r,border,dark->GetBackground(this),DarkMode::Darkest,focus);
+
     dc.SelectClipRgn(NULL);
   }
   else
@@ -862,7 +879,7 @@ DarkModePropertyPage::DarkModePropertyPage(UINT id) : CPropertyPage(id)
 {
 }
 
-void DarkModePropertyPage::SetDarkMode(DarkMode* dark, bool init)
+void DarkModePropertyPage::SetDarkMode(DarkMode*, bool)
 {
 }
 
@@ -1278,6 +1295,26 @@ LRESULT DarkModeSliderCtrl::OnSetPos(WPARAM, LPARAM)
   // of the control to be called directly, so here we force a redraw.
   RedrawWindow(NULL,NULL,RDW_INVALIDATE);
   return result;
+}
+
+// Dark mode controls: DarkModeSpinButtonCtrl
+
+BEGIN_MESSAGE_MAP(DarkModeSpinButtonCtrl, CSpinButtonCtrl)
+  ON_WM_PAINT()
+END_MESSAGE_MAP()
+
+void DarkModeSpinButtonCtrl::OnPaint()
+{
+  DarkMode* dark = DarkMode::GetActive(this);
+  if (dark)
+  {
+    CRect r;
+    GetClientRect(r);
+    CPaintDC dc(this);
+    dc.FillSolidRect(r,RGB(255,0,0));
+  }
+  else
+    Default();
 }
 
 // Dark mode controls: DarkModeStatic
