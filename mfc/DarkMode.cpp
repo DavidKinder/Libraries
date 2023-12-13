@@ -1300,21 +1300,159 @@ LRESULT DarkModeSliderCtrl::OnSetPos(WPARAM, LPARAM)
 // Dark mode controls: DarkModeSpinButtonCtrl
 
 BEGIN_MESSAGE_MAP(DarkModeSpinButtonCtrl, CSpinButtonCtrl)
+  ON_WM_ERASEBKGND()
   ON_WM_PAINT()
+  ON_WM_LBUTTONDOWN()
+  ON_WM_LBUTTONUP()
+  ON_WM_CANCELMODE()
+  ON_WM_MOUSEMOVE()
+  ON_WM_MOUSELEAVE()
 END_MESSAGE_MAP()
+
+BOOL DarkModeSpinButtonCtrl::OnEraseBkgnd(CDC* pDC)
+{
+  DarkMode* dark = DarkMode::GetActive(this);
+  if (dark)
+    return TRUE;
+  else
+    return CSpinButtonCtrl::OnEraseBkgnd(pDC);
+}
 
 void DarkModeSpinButtonCtrl::OnPaint()
 {
   DarkMode* dark = DarkMode::GetActive(this);
   if (dark)
   {
+    CPaintDC dc(this);
+
     CRect r;
     GetClientRect(r);
-    CPaintDC dc(this);
-    dc.FillSolidRect(r,RGB(255,0,0));
+    CPoint centre = r.CenterPoint();
+
+    // Draw the background of the up button
+    DarkMode::DarkColour fill = DarkMode::No_Colour;
+    if (m_selectUp && m_hotUp)
+      fill = DarkMode::Dark1;
+    else if (m_selectUp || (m_hotUp && !m_selectDown))
+      fill = DarkMode::Dark2;
+    else
+      fill = DarkMode::Darkest;
+    dc.FillSolidRect(r.left,r.top,r.Width(),centre.y-r.top,dark->GetColour(fill));
+
+    // Draw the background of the down button
+    fill = DarkMode::Darkest;
+    if (m_selectDown && m_hotDown)
+      fill = DarkMode::Dark1;
+    else if (m_selectDown || (m_hotDown && !m_selectUp))
+      fill = DarkMode::Dark2;
+    else
+      fill = DarkMode::Darkest;
+    dc.FillSolidRect(r.left,centre.y,r.Width(),r.bottom-centre.y,dark->GetColour(fill));
+
+    // Draw the button borders
+    CPen borderPen;
+    borderPen.CreatePen(PS_SOLID,1,dark->GetColour(DarkMode::Dark2));
+    CPen* oldPen = dc.SelectObject(&borderPen);
+    dc.MoveTo(r.left,r.top);
+    dc.LineTo(r.right-1,r.top);
+    dc.LineTo(r.right-1,r.bottom-1);
+    dc.LineTo(r.left,r.bottom-1);
+    dc.LineTo(r.left,r.top);
+    dc.MoveTo(r.left,centre.y);
+    dc.LineTo(r.right,centre.y);
+
+    // Draw the button arrows
+    CPen arrowPen;
+    arrowPen.CreatePen(PS_SOLID,1,dark->GetColour(DarkMode::Fore));
+    dc.SelectObject(&arrowPen);
+    for (int i = 0; i < 2; i++)
+    {
+      int y = ((i > 0) ? centre.y : r.top) + (r.Height() / 4);
+      int ydir = (i > 0) ? -1 : +1;
+
+      dc.MoveTo(centre.x,y-ydir);
+      dc.LineTo(centre.x+1,y-ydir);
+      dc.MoveTo(centre.x-1,y);
+      dc.LineTo(centre.x+2,y);
+      dc.MoveTo(centre.x-2,y+ydir);
+      dc.LineTo(centre.x+3,y+ydir);
+    }
+
+    dc.SelectObject(oldPen);
   }
   else
     Default();
+}
+
+void DarkModeSpinButtonCtrl::OnLButtonDown(UINT nFlags, CPoint point)
+{
+  CRect r;
+  GetClientRect(r);
+
+  CRect rectUp(r);
+  CRect rectDown(r);
+  rectUp.bottom = r.CenterPoint().y;
+  rectDown.top = rectUp.bottom;
+
+  m_selectUp = rectUp.PtInRect(point);
+  m_selectDown = rectDown.PtInRect(point);
+
+  CSpinButtonCtrl::OnLButtonDown(nFlags, point);
+}
+
+void DarkModeSpinButtonCtrl::OnLButtonUp(UINT nFlags, CPoint point)
+{
+  m_selectUp = false;
+  m_selectDown = false;
+
+  CSpinButtonCtrl::OnLButtonUp(nFlags, point);
+}
+
+void DarkModeSpinButtonCtrl::OnCancelMode()
+{
+  CSpinButtonCtrl::OnCancelMode();
+
+  m_selectUp = false;
+  m_selectDown = false;
+}
+
+void DarkModeSpinButtonCtrl::OnMouseMove(UINT nFlags, CPoint point)
+{
+  bool hotUp = m_hotUp;
+  bool hotDown = m_hotDown;
+
+  CRect r;
+  GetClientRect(r);
+
+  CRect rectUp(r);
+  CRect rectDown(r);
+  rectUp.bottom = r.CenterPoint().y;
+  rectDown.top = rectUp.bottom;
+
+  m_hotUp = rectUp.PtInRect(point);
+  m_hotDown = rectDown.PtInRect(point);
+
+  CSpinButtonCtrl::OnMouseMove(nFlags, point);
+
+  if ((hotUp != m_hotUp) || (hotDown != m_hotDown))
+    Invalidate();
+
+  if (!m_mouseTrack)
+  {
+    TRACKMOUSEEVENT tme = { sizeof(TRACKMOUSEEVENT), 0 };
+    tme.dwFlags = TME_LEAVE;
+    tme.hwndTrack = GetSafeHwnd();
+    ::TrackMouseEvent(&tme);
+    m_mouseTrack = true;
+  }
+}
+
+void DarkModeSpinButtonCtrl::OnMouseLeave()
+{
+  m_mouseTrack = false;
+  m_hotUp = false;
+  m_hotDown = false;
+  Invalidate();
 }
 
 // Dark mode controls: DarkModeStatic

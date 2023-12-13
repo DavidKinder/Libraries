@@ -225,8 +225,20 @@ protected:
 class DarkModeSpinButtonCtrl : public CSpinButtonCtrl
 {
 protected:
+  afx_msg BOOL OnEraseBkgnd(CDC* pDC);
   afx_msg void OnPaint();
+  afx_msg void OnLButtonDown(UINT nFlags, CPoint point);
+  afx_msg void OnLButtonUp(UINT nFlags, CPoint point);
+  afx_msg void OnCancelMode();
+  afx_msg void OnMouseMove(UINT nFlags, CPoint point);
+  afx_msg void OnMouseLeave();
   DECLARE_MESSAGE_MAP()
+
+  bool m_selectUp = false;
+  bool m_selectDown = false;
+  bool m_hotUp = false;
+  bool m_hotDown = false;
+  bool m_mouseTrack = false;
 };
 
 class DarkModeStatic : public CStatic
