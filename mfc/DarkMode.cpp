@@ -1306,7 +1306,6 @@ BEGIN_MESSAGE_MAP(DarkModeSpinButtonCtrl, CSpinButtonCtrl)
   ON_WM_LBUTTONUP()
   ON_WM_CANCELMODE()
   ON_WM_MOUSEMOVE()
-  ON_WM_MOUSELEAVE()
 END_MESSAGE_MAP()
 
 BOOL DarkModeSpinButtonCtrl::OnEraseBkgnd(CDC* pDC)
@@ -1331,19 +1330,18 @@ void DarkModeSpinButtonCtrl::OnPaint()
 
     // Draw the background of the up button
     DarkMode::DarkColour fill = DarkMode::No_Colour;
-    if (m_selectUp && m_hotUp)
+    if (m_clickUp && m_hotUp)
       fill = DarkMode::Dark1;
-    else if (m_selectUp || (m_hotUp && !m_selectDown))
+    else if (m_hotUp)
       fill = DarkMode::Dark2;
     else
       fill = DarkMode::Darkest;
     dc.FillSolidRect(r.left,r.top,r.Width(),centre.y-r.top,dark->GetColour(fill));
 
     // Draw the background of the down button
-    fill = DarkMode::Darkest;
-    if (m_selectDown && m_hotDown)
+    if (m_clickDown && m_hotDown)
       fill = DarkMode::Dark1;
-    else if (m_selectDown || (m_hotDown && !m_selectUp))
+    else if (m_hotDown)
       fill = DarkMode::Dark2;
     else
       fill = DarkMode::Darkest;
@@ -1394,16 +1392,16 @@ void DarkModeSpinButtonCtrl::OnLButtonDown(UINT nFlags, CPoint point)
   rectUp.bottom = r.CenterPoint().y;
   rectDown.top = rectUp.bottom;
 
-  m_selectUp = rectUp.PtInRect(point);
-  m_selectDown = rectDown.PtInRect(point);
+  m_clickUp = rectUp.PtInRect(point);
+  m_clickDown = rectDown.PtInRect(point);
 
   CSpinButtonCtrl::OnLButtonDown(nFlags, point);
 }
 
 void DarkModeSpinButtonCtrl::OnLButtonUp(UINT nFlags, CPoint point)
 {
-  m_selectUp = false;
-  m_selectDown = false;
+  m_clickUp = false;
+  m_clickDown = false;
 
   CSpinButtonCtrl::OnLButtonUp(nFlags, point);
 }
@@ -1412,8 +1410,8 @@ void DarkModeSpinButtonCtrl::OnCancelMode()
 {
   CSpinButtonCtrl::OnCancelMode();
 
-  m_selectUp = false;
-  m_selectDown = false;
+  m_clickUp = false;
+  m_clickDown = false;
 }
 
 void DarkModeSpinButtonCtrl::OnMouseMove(UINT nFlags, CPoint point)
@@ -1429,30 +1427,13 @@ void DarkModeSpinButtonCtrl::OnMouseMove(UINT nFlags, CPoint point)
   rectUp.bottom = r.CenterPoint().y;
   rectDown.top = rectUp.bottom;
 
-  m_hotUp = rectUp.PtInRect(point);
-  m_hotDown = rectDown.PtInRect(point);
+  m_hotUp = (point.y >= r.top) && (point.y < r.CenterPoint().y);
+  m_hotDown = (point.y >= r.CenterPoint().y) && (point.y < r.bottom);
 
   CSpinButtonCtrl::OnMouseMove(nFlags, point);
 
   if ((hotUp != m_hotUp) || (hotDown != m_hotDown))
     Invalidate();
-
-  if (!m_mouseTrack)
-  {
-    TRACKMOUSEEVENT tme = { sizeof(TRACKMOUSEEVENT), 0 };
-    tme.dwFlags = TME_LEAVE;
-    tme.hwndTrack = GetSafeHwnd();
-    ::TrackMouseEvent(&tme);
-    m_mouseTrack = true;
-  }
-}
-
-void DarkModeSpinButtonCtrl::OnMouseLeave()
-{
-  m_mouseTrack = false;
-  m_hotUp = false;
-  m_hotDown = false;
-  Invalidate();
 }
 
 // Dark mode controls: DarkModeStatic

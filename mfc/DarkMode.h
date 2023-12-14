@@ -231,14 +231,12 @@ protected:
   afx_msg void OnLButtonUp(UINT nFlags, CPoint point);
   afx_msg void OnCancelMode();
   afx_msg void OnMouseMove(UINT nFlags, CPoint point);
-  afx_msg void OnMouseLeave();
   DECLARE_MESSAGE_MAP()
 
-  bool m_selectUp = false;
-  bool m_selectDown = false;
   bool m_hotUp = false;
   bool m_hotDown = false;
-  bool m_mouseTrack = false;
+  bool m_clickUp = false;
+  bool m_clickDown = false;
 };
 
 class DarkModeStatic : public CStatic
