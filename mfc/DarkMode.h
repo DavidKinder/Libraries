@@ -99,18 +99,22 @@ protected:
   DarkMode::DarkColour m_activeBorder = DarkMode::Fore;
 };
 
+class DarkModeSpinButtonCtrl;
+
 class DarkModeEdit : public CEdit
 {
   DECLARE_DYNAMIC(DarkModeEdit)
 
 public:
-  void SetOverlapWnd(CWnd* overWnd);
+  void SetSpinButton(DarkModeSpinButtonCtrl* spinButton);
 
 protected:
   afx_msg void OnNcPaint();
+  afx_msg void OnKeyDown(UINT nChar, UINT nRepCnt, UINT nFlags);
+  afx_msg void OnKeyUp(UINT nChar, UINT nRepCnt, UINT nFlags);
   DECLARE_MESSAGE_MAP()
 
-  CWnd* m_overlapWnd = NULL;
+  DarkModeSpinButtonCtrl* m_spinButton = NULL;
 };
 
 class DarkModeGroupBox : public CButton
@@ -224,6 +228,9 @@ protected:
 
 class DarkModeSpinButtonCtrl : public CSpinButtonCtrl
 {
+public:
+  void EditControlKey(UINT key, bool pressed);
+
 protected:
   afx_msg BOOL OnEraseBkgnd(CDC* pDC);
   afx_msg void OnPaint();
@@ -231,12 +238,17 @@ protected:
   afx_msg void OnLButtonUp(UINT nFlags, CPoint point);
   afx_msg void OnCancelMode();
   afx_msg void OnMouseMove(UINT nFlags, CPoint point);
+  afx_msg void OnMouseLeave();
   DECLARE_MESSAGE_MAP()
+
+  bool m_mouseTrack = false;
 
   bool m_hotUp = false;
   bool m_hotDown = false;
   bool m_clickUp = false;
   bool m_clickDown = false;
+  bool m_keyUp = false;
+  bool m_keyDown = false;
 };
 
 class DarkModeStatic : public CStatic

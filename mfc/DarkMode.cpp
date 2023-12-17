@@ -708,11 +708,13 @@ IMPLEMENT_DYNAMIC(DarkModeEdit, CEdit)
 
 BEGIN_MESSAGE_MAP(DarkModeEdit, CEdit)
   ON_WM_NCPAINT()
+  ON_WM_KEYDOWN()
+  ON_WM_KEYUP()
 END_MESSAGE_MAP()
 
-void DarkModeEdit::SetOverlapWnd(CWnd* overWnd)
+void DarkModeEdit::SetSpinButton(DarkModeSpinButtonCtrl* spinButton)
 {
-  m_overlapWnd = overWnd;
+  m_spinButton = spinButton;
 }
 
 void DarkModeEdit::OnNcPaint()
@@ -723,12 +725,12 @@ void DarkModeEdit::OnNcPaint()
     CWindowDC dc(this);
     CRect r = dark->PrepareNonClientBorder(this,dc);
 
-    if (m_overlapWnd)
+    if (m_spinButton)
     {
-      // Exclude the window rectangle over the overlapping window
+      // Exclude the window rectangle of the spin button, if any
       CRect rw, ro;
       GetWindowRect(rw);
-      m_overlapWnd->GetWindowRect(ro);
+      m_spinButton->GetWindowRect(ro);
       ro.OffsetRect(-rw.TopLeft());
       dc.ExcludeClipRect(ro);
     }
@@ -741,6 +743,20 @@ void DarkModeEdit::OnNcPaint()
   }
   else
     Default();
+}
+
+void DarkModeEdit::OnKeyDown(UINT nChar, UINT nRepCnt, UINT nFlags) 
+{
+  if (m_spinButton)
+    m_spinButton->EditControlKey(nChar,true);
+  CEdit::OnKeyDown(nChar,nRepCnt,nFlags);
+}
+
+void DarkModeEdit::OnKeyUp(UINT nChar, UINT nRepCnt, UINT nFlags) 
+{
+  if (m_spinButton)
+    m_spinButton->EditControlKey(nChar,false);
+  CEdit::OnKeyUp(nChar,nRepCnt,nFlags);
 }
 
 // Dark mode controls: DarkModeGroupBox
@@ -1306,7 +1322,27 @@ BEGIN_MESSAGE_MAP(DarkModeSpinButtonCtrl, CSpinButtonCtrl)
   ON_WM_LBUTTONUP()
   ON_WM_CANCELMODE()
   ON_WM_MOUSEMOVE()
+  ON_WM_MOUSELEAVE()
 END_MESSAGE_MAP()
+
+void DarkModeSpinButtonCtrl::EditControlKey(UINT key, bool pressed)
+{
+  bool keyUp = m_keyUp;
+  bool keyDown = m_keyDown;
+
+  switch (key)
+  {
+  case VK_UP:
+    m_keyUp = pressed;
+    break;
+  case VK_DOWN:
+    m_keyDown = pressed;
+    break;
+  }
+
+  if ((keyUp != m_keyUp) || (keyDown != m_keyDown))
+    Invalidate();
+}
 
 BOOL DarkModeSpinButtonCtrl::OnEraseBkgnd(CDC* pDC)
 {
@@ -1330,7 +1366,7 @@ void DarkModeSpinButtonCtrl::OnPaint()
 
     // Draw the background of the up button
     DarkMode::DarkColour fill = DarkMode::No_Colour;
-    if (m_clickUp && m_hotUp)
+    if ((m_clickUp && m_hotUp) || m_keyUp)
       fill = DarkMode::Dark1;
     else if (m_hotUp)
       fill = DarkMode::Dark2;
@@ -1339,7 +1375,7 @@ void DarkModeSpinButtonCtrl::OnPaint()
     dc.FillSolidRect(r.left,r.top,r.Width(),centre.y-r.top,dark->GetColour(fill));
 
     // Draw the background of the down button
-    if (m_clickDown && m_hotDown)
+    if ((m_clickDown && m_hotDown) || m_keyDown)
       fill = DarkMode::Dark1;
     else if (m_hotDown)
       fill = DarkMode::Dark2;
@@ -1434,6 +1470,28 @@ void DarkModeSpinButtonCtrl::OnMouseMove(UINT nFlags, CPoint point)
 
   if ((hotUp != m_hotUp) || (hotDown != m_hotDown))
     Invalidate();
+
+  if (!m_mouseTrack && r.PtInRect(point))
+  {
+    // Listen for the mouse leaving this control
+    TRACKMOUSEEVENT tme = { sizeof(TRACKMOUSEEVENT), 0 };
+    tme.dwFlags = TME_LEAVE;
+    tme.hwndTrack = GetSafeHwnd();
+    ::TrackMouseEvent(&tme);
+    m_mouseTrack = true;
+  }
+}
+
+void DarkModeSpinButtonCtrl::OnMouseLeave()
+{
+  m_mouseTrack = false;
+
+  if (GetCapture() != this)
+  {
+    m_hotUp = false;
+    m_hotDown = false;
+    Invalidate();
+  }
 }
 
 // Dark mode controls: DarkModeStatic
