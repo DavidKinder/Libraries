@@ -116,6 +116,30 @@ void DarkMode::SetAppDarkMode(void)
   }
 }
 
+void DarkMode::SetAppDarkMode(DarkMode* dark)
+{
+  if (CheckWindowsVersion(10,0,18362)) // Windows 10 build 1903 "19H1"
+  {
+    HMODULE uxtheme = ::LoadLibrary("uxtheme.dll");
+    if (uxtheme != 0)
+    {
+      typedef int(__stdcall *SETPREFERREDAPPMODE)(int);
+      SETPREFERREDAPPMODE SetPreferredAppMode =
+        (SETPREFERREDAPPMODE)::GetProcAddress(uxtheme,MAKEINTRESOURCE(135));
+      if (SetPreferredAppMode)
+        (*SetPreferredAppMode)(dark ? 2 : 3);
+
+      typedef void(__stdcall *FLUSHMENUTHEMES)(void);
+      FLUSHMENUTHEMES FlushMenuThemes =
+        (FLUSHMENUTHEMES)::GetProcAddress(uxtheme,MAKEINTRESOURCE(136));
+      if (FlushMenuThemes)
+        (*FlushMenuThemes)();
+
+      ::FreeLibrary(uxtheme);
+    }
+  }
+}
+
 void DarkMode::SetDarkTitle(CWnd* wnd, BOOL dark)
 {
   HMODULE dwm = ::LoadLibrary("dwmapi.dll");
