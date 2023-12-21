@@ -1499,6 +1499,7 @@ void DarkModeSpinButtonCtrl::OnMouseLeave()
 BEGIN_MESSAGE_MAP(DarkModeStatic, CStatic)
   ON_WM_PAINT()
   ON_WM_ENABLE()
+  ON_MESSAGE(WM_UPDATEUISTATE, OnUpdateUIState)
 END_MESSAGE_MAP()
 
 void DarkModeStatic::OnPaint()
@@ -1539,7 +1540,24 @@ void DarkModeStatic::OnEnable(BOOL bEnable)
 
   // Changing the enabled state will cause the internal painting logic
   // of the control to be called directly, so here we force a redraw.
-  RedrawWindow(NULL,NULL,RDW_INVALIDATE|RDW_UPDATENOW);
+  RedrawWindow(NULL,NULL,RDW_ERASE|RDW_INVALIDATE|RDW_UPDATENOW);
+}
+
+LRESULT DarkModeStatic::OnUpdateUIState(WPARAM wparam, LPARAM)
+{
+  LRESULT result = Default();
+
+  // If showing accelerators in dark mode, redraw everything, as the
+  // default message processing will have drawn a standard greyed out
+  // underlining character.
+  if ((LOWORD(wparam) == UIS_CLEAR) && (HIWORD(wparam) & UISF_HIDEACCEL))
+  {
+    DarkMode* dark = DarkMode::GetActive(this);
+    if (dark)
+      RedrawWindow(NULL,NULL,RDW_ERASE|RDW_INVALIDATE|RDW_UPDATENOW);
+  }
+
+  return result;
 }
 
 // Dark mode controls: DarkModeStatusBar

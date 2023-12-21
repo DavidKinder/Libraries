@@ -256,6 +256,7 @@ class DarkModeStatic : public CStatic
 protected:
   afx_msg void OnPaint();
   afx_msg void OnEnable(BOOL bEnable);
+  afx_msg LRESULT OnUpdateUIState(WPARAM, LPARAM);
   DECLARE_MESSAGE_MAP()
 };
 
