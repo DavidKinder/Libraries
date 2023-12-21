@@ -1510,20 +1510,23 @@ void DarkModeStatic::OnPaint()
     GetClientRect(r);
     CPaintDC dc(this);
 
-    CFont* oldFont = dc.SelectObject(GetFont());
-
-    CString label;
-    GetWindowText(label);
+    UINT dtFlags = DT_TOP;
+    if ((SendMessage(WM_QUERYUISTATE) & UISF_HIDEACCEL) != 0)
+      dtFlags |= DT_HIDEPREFIX;
     DWORD style = GetStyle();
-    UINT dtFlags = DT_TOP|DT_HIDEPREFIX;
     if (style & SS_RIGHT)
       dtFlags |= DT_RIGHT;
+
     GetParent()->SendMessage(WM_CTLCOLORSTATIC,(WPARAM)dc.GetSafeHdc(),(LPARAM)GetSafeHwnd());
     dc.SetBkMode(OPAQUE);
     if (style & WS_DISABLED)
       dc.SetTextColor(dark->GetColour(DarkMode::Dark3));
-    dc.DrawText(label,r,dtFlags);
 
+    CString label;
+    GetWindowText(label);
+
+    CFont* oldFont = dc.SelectObject(GetFont());
+    dc.DrawText(label,r,dtFlags);
     dc.SelectObject(oldFont);
   }
   else
