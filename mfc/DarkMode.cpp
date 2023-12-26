@@ -95,8 +95,13 @@ DarkMode* DarkMode::GetEnabled(const char* path)
 
 DarkMode* DarkMode::GetActive(CWnd* wnd)
 {
-  CWnd* frame = wnd->IsFrameWnd() ? wnd : wnd->GetParentFrame();
-  return (DarkMode*)frame->SendMessage(WM_DARKMODE_ACTIVE);
+  if (wnd)
+  {
+    CWnd* frame = wnd->IsFrameWnd() ? wnd : wnd->GetParentFrame();
+    if (frame)
+      return (DarkMode*)frame->SendMessage(WM_DARKMODE_ACTIVE);
+  }
+  return NULL;
 }
 
 void DarkMode::SetAppDarkMode(void)
