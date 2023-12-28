@@ -375,6 +375,38 @@ DarkMode::DarkColour DarkMode::GetBackground(CWnd* wnd)
 
 IMPLEMENT_DYNAMIC(DarkModeParentWnd, CWnd)
 
+BEGIN_MESSAGE_MAP(DarkModeHiddenFrameWnd, CFrameWnd)
+  ON_MESSAGE(WM_DARKMODE_ACTIVE, OnDarkModeActive)
+END_MESSAGE_MAP()
+
+DarkModeHiddenFrameWnd::DarkModeHiddenFrameWnd()
+{
+  m_dark = NULL;
+}
+
+DarkModeHiddenFrameWnd::~DarkModeHiddenFrameWnd()
+{
+  if (m_dark)
+  {
+    delete m_dark;
+    m_dark = NULL;
+  }
+}
+
+BOOL DarkModeHiddenFrameWnd::Create(const char* path)
+{
+  if (CreateEx(0,AfxRegisterWndClass(0),"DarkHiddenFrame",WS_OVERLAPPEDWINDOW,CRect(0,0,0,0),NULL,0,NULL) == FALSE)
+    return FALSE;
+
+  m_dark = DarkMode::GetEnabled(path);
+  return TRUE;
+}
+
+LRESULT DarkModeHiddenFrameWnd::OnDarkModeActive(WPARAM, LPARAM)
+{
+  return (LRESULT)m_dark;
+}
+
 // Dark mode controls: DarkModeButton
 
 BEGIN_MESSAGE_MAP(DarkModeButton, CButton)

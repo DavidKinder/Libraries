@@ -57,6 +57,21 @@ public:
   virtual DarkMode::DarkColour GetDarkBackground(void) = 0;
 };
 
+class DarkModeHiddenFrameWnd : public CFrameWnd
+{
+public:
+  DarkModeHiddenFrameWnd();
+  virtual ~DarkModeHiddenFrameWnd();
+
+  BOOL Create(const char* path);
+
+protected:
+  afx_msg LRESULT OnDarkModeActive(WPARAM, LPARAM);
+  DECLARE_MESSAGE_MAP()
+
+  DarkMode* m_dark;
+};
+
 class DarkModeButton : public CButton
 {
 protected:
