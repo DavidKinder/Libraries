@@ -424,7 +424,7 @@ void DarkModeButton::OnCustomDraw(NMHDR* nmhdr, LRESULT* result)
         if (uiState & UISF_HIDEACCEL)
           dtFlags |= DT_HIDEPREFIX;
         CFont* oldFont = dc->SelectObject(GetFont());
-        dc->DrawText(label,r,dtFlags);
+        ::DrawTextW(dc->GetSafeHdc(),CStringW(label),-1,r,dtFlags);
 
         if (CWnd::GetFocus() == this)
         {
@@ -562,12 +562,12 @@ void DarkModeCheckButton::OnCustomDraw(NMHDR* nmhdr, LRESULT* result)
         UINT uiState = (UINT)SendMessage(WM_QUERYUISTATE);
         if (uiState & UISF_HIDEACCEL)
           dtFlags |= DT_HIDEPREFIX;
-        dc->DrawText(label,textR,dtFlags);
+        ::DrawTextW(dc->GetSafeHdc(),CStringW(label),-1,textR,dtFlags);
 
         // Draw the focus rectangle, if needed
         if (HasFocusRect(uiState))
         {
-          dc->DrawText(label,textR,dtFlags|DT_CALCRECT);
+          ::DrawTextW(dc->GetSafeHdc(),CStringW(label),-1,textR,dtFlags|DT_CALCRECT);
           textR.InflateRect(2,0);
           dc->SetTextColor(dark->GetColour(DarkMode::Fore));
           dc->SetBkColor(dark->GetColour(DarkMode::Back));
@@ -676,7 +676,7 @@ void DarkModeComboBox::OnPaint()
       dc.SetBkMode(TRANSPARENT);
       itemR.left += 2;
       CFont* oldFont = dc.SelectObject(GetFont());
-      dc.DrawText(itemText,itemR,DT_LEFT|DT_VCENTER|DT_HIDEPREFIX|DT_END_ELLIPSIS);
+      ::DrawTextW(dc.GetSafeHdc(),CStringW(itemText),-1,itemR,DT_LEFT|DT_VCENTER|DT_HIDEPREFIX|DT_END_ELLIPSIS);
 
       // Draw the focus rectangle, if needed
       if (!GetDroppedState() && (CWnd::GetFocus() == this))
@@ -820,7 +820,7 @@ void DarkModeGroupBox::OnPaint()
     dc.SetBkColor(dark->GetColour(DarkMode::Back));
     GetParent()->SendMessage(WM_CTLCOLORSTATIC,(WPARAM)dc.GetSafeHdc(),(LPARAM)GetSafeHwnd());
     dc.SetBkMode(OPAQUE);
-    dc.DrawText(label,r,DT_LEFT|DT_TOP|DT_HIDEPREFIX|DT_SINGLELINE);
+    ::DrawTextW(dc.GetSafeHdc(),CStringW(label),-1,r,DT_LEFT|DT_TOP|DT_HIDEPREFIX|DT_SINGLELINE);
 
     dc.SelectObject(oldFont);
   }
@@ -1157,14 +1157,14 @@ void DarkModeRadioButton::OnCustomDraw(NMHDR* nmhdr, LRESULT* result)
         UINT uiState = (UINT)SendMessage(WM_QUERYUISTATE);
         if (uiState & UISF_HIDEACCEL)
           dtFlags |= DT_HIDEPREFIX;
-        dc->DrawText(label,textR,dtFlags);
+        ::DrawTextW(dc->GetSafeHdc(),CStringW(label),-1,textR,dtFlags);
 
         // Draw the focus rectangle, if needed
         if (CWnd::GetFocus() == this)
         {
           if ((uiState & UISF_HIDEFOCUS) == 0)
           {
-            dc->DrawText(label,textR,dtFlags|DT_CALCRECT);
+            ::DrawTextW(dc->GetSafeHdc(),CStringW(label),-1,textR,dtFlags|DT_CALCRECT);
             textR.InflateRect(2,0);
             dc->SetTextColor(dark->GetColour(DarkMode::Fore));
             dc->SetBkColor(dark->GetColour(DarkMode::Back));
@@ -1556,7 +1556,7 @@ void DarkModeStatic::OnPaint()
     GetWindowText(label);
 
     CFont* oldFont = dc.SelectObject(GetFont());
-    dc.DrawText(label,r,dtFlags);
+    ::DrawTextW(dc.GetSafeHdc(),CStringW(label),-1,r,dtFlags);
     dc.SelectObject(oldFont);
   }
   else
@@ -1629,7 +1629,7 @@ void DarkModeStatusBar::OnPaint()
         ir.right -= m_cxDefaultGap;
       }
       if (!(style & SBPS_DISABLED))
-        dc.DrawText(GetPaneText(i),ir,DT_SINGLELINE);
+        ::DrawTextW(dc.GetSafeHdc(),CStringW(GetPaneText(i)),-1,ir,DT_SINGLELINE);
     }
 
     if (::IsAppThemed())
@@ -1700,7 +1700,7 @@ void DarkModeTabCtrl::OnPaint()
       dc.SetTextColor(dark->GetColour(DarkMode::Fore));
       dc.SetBkMode(TRANSPARENT);
       CFont* oldFont = dc.SelectObject(GetFont());
-      dc.DrawText(label,ir,DT_SINGLELINE|DT_CENTER|DT_VCENTER);
+      ::DrawTextW(dc.GetSafeHdc(),CStringW(label),-1,ir,DT_SINGLELINE|DT_CENTER|DT_VCENTER);
       dc.SelectObject(oldFont);
 
       if (i == sel)
