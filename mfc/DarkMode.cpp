@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "DarkMode.h"
 
+#include "Dialogs.h"
 #include "DpiFunctions.h"
 #include "ImagePNG.h"
 
@@ -373,9 +374,16 @@ DarkMode::DarkColour DarkMode::GetBackground(CWnd* wnd)
   return DarkMode::Darkest;
 }
 
+// Dark mode windows: DarkModeParentWnd
+
 IMPLEMENT_DYNAMIC(DarkModeParentWnd, CWnd)
 
+// Dark mode windows: DarkModeHiddenFrameWnd
+
+IMPLEMENT_DYNAMIC(DarkModeHiddenFrameWnd, CFrameWnd)
+
 BEGIN_MESSAGE_MAP(DarkModeHiddenFrameWnd, CFrameWnd)
+  ON_WM_SETTINGCHANGE()
   ON_MESSAGE(WM_DARKMODE_ACTIVE, OnDarkModeActive)
 END_MESSAGE_MAP()
 
@@ -398,8 +406,30 @@ BOOL DarkModeHiddenFrameWnd::Create(const char* path)
   if (CreateEx(0,AfxRegisterWndClass(0),"DarkHiddenFrame",WS_OVERLAPPEDWINDOW,CRect(0,0,0,0),NULL,0,NULL) == FALSE)
     return FALSE;
 
-  m_dark = DarkMode::GetEnabled(path);
+  m_path = path;
+  m_dark = DarkMode::GetEnabled(m_path);
   return TRUE;
+}
+
+void DarkModeHiddenFrameWnd::SetModalDialog(CWnd* dialog)
+{
+  m_modalDialog = dialog;
+}
+
+void DarkModeHiddenFrameWnd::OnSettingChange(UINT uFlags, LPCTSTR lpszSection)
+{
+  CFrameWnd::OnSettingChange(uFlags,lpszSection);
+
+  if ((m_dark != NULL) != DarkMode::IsEnabled(m_path))
+  {
+    m_dark = DarkMode::GetEnabled(m_path);
+    if (m_modalDialog != NULL)
+    {
+      if (m_modalDialog->IsKindOf(RUNTIME_CLASS(BaseDialog)))
+        ((BaseDialog*)m_modalDialog)->SetDarkMode(DarkMode::GetActive(m_modalDialog));
+    }
+    DarkMode::SetAppDarkMode(m_dark);
+  }
 }
 
 LRESULT DarkModeHiddenFrameWnd::OnDarkModeActive(WPARAM, LPARAM)

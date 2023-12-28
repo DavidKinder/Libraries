@@ -59,17 +59,23 @@ public:
 
 class DarkModeHiddenFrameWnd : public CFrameWnd
 {
+  DECLARE_DYNAMIC(DarkModeHiddenFrameWnd)
+
 public:
   DarkModeHiddenFrameWnd();
   virtual ~DarkModeHiddenFrameWnd();
 
   BOOL Create(const char* path);
+  void SetModalDialog(CWnd* dialog);
 
 protected:
+  afx_msg void OnSettingChange(UINT uFlags, LPCTSTR lpszSection);
   afx_msg LRESULT OnDarkModeActive(WPARAM, LPARAM);
   DECLARE_MESSAGE_MAP()
 
+  CString m_path;
   DarkMode* m_dark;
+  CWnd* m_modalDialog;
 };
 
 class DarkModeButton : public CButton
