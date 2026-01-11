@@ -108,18 +108,22 @@ template <class FilterClass>
 class TwoPassScale
 {
 public:
-  void Scale(COLORREF* origImage, UINT origWidth, UINT origHeight, COLORREF* dstImage, UINT newWidth, UINT newHeight);
+  void Scale(COLORREF* origImage, UINT origWidth, UINT origHeight,
+    COLORREF* dstImage, UINT newWidth, UINT newHeight, UINT origScale);
 
 private:
   LineContribType* AllocContributions(UINT lineLen, UINT winSize);
   void FreeContributions(LineContribType* contrib);
   LineContribType* CalcContributions(UINT lineSize, UINT srcSize, float scale);
   inline void AddWeight(COLORREF src, float weight, int& r, int& g, int& b, int& a);
-  void ScaleRow(COLORREF* src, UINT srcWidth, COLORREF* res, UINT resWidth, UINT row, LineContribType* contrib);
-  void HorizScale(COLORREF* src, UINT srcWidth, UINT srcHeight, COLORREF* dst, UINT resWidth, UINT resHeight);
-  void ScaleCol(COLORREF* src, UINT srcWidth,
-    COLORREF* res, UINT resWidth, UINT resHeight, UINT col, LineContribType* contrib);
-  void VertScale(COLORREF* src, UINT srcWidth, UINT srcHeight, COLORREF* dst, UINT resWidth, UINT resHeight);
+  void ScaleRow(COLORREF* src, UINT srcWidth, COLORREF* res, UINT resWidth,
+    UINT row, LineContribType* contrib, UINT scaleWidth);
+  void HorizScale(COLORREF* src, UINT srcWidth, UINT srcHeight,
+    COLORREF* dst, UINT resWidth, UINT resHeight, UINT scaleWidth);
+  void ScaleCol(COLORREF* src, UINT srcWidth, COLORREF* res, UINT resWidth, UINT resHeight,
+    UINT col, LineContribType* contrib, UINT scaleHeight);
+  void VertScale(COLORREF* src, UINT srcWidth, UINT srcHeight,
+    COLORREF* dst, UINT resWidth, UINT resHeight, UINT scaleHeight);
 };
 
 template<class FilterClass>
@@ -221,9 +225,9 @@ inline void TwoPassScale<FilterClass>::AddWeight(COLORREF src, float weight, int
 
 template<class FilterClass>
 void TwoPassScale<FilterClass>::ScaleRow(COLORREF* src, UINT srcWidth, COLORREF* res, UINT resWidth,
-                                         UINT row, LineContribType* contrib)
+                                         UINT row, LineContribType* contrib, UINT scaleWidth)
 {
-  COLORREF* srcRow = src + (row * srcWidth);
+  COLORREF* srcRow = src + (row * (srcWidth / scaleWidth));
   COLORREF* dstRow = res + (row * resWidth);
   for (UINT x = 0; x < resWidth; x++)
   {
@@ -231,10 +235,10 @@ void TwoPassScale<FilterClass>::ScaleRow(COLORREF* src, UINT srcWidth, COLORREF*
     int r = 0; int g = 0; int b = 0; int a = 0;
     int left = contrib->row[x].left;   // Retrieve left boundary
     int right = contrib->row[x].right; // Retrieve right boundary
-    int same = 1; COLORREF color = srcRow[left];
+    int same = 1; COLORREF color = srcRow[left / scaleWidth];
     for (int i = left+1; i <= right; i++)
     {
-      if (srcRow[i] != color)
+      if (srcRow[i / scaleWidth] != color)
       {
         same = 0;
         break;
@@ -248,7 +252,7 @@ void TwoPassScale<FilterClass>::ScaleRow(COLORREF* src, UINT srcWidth, COLORREF*
       {
         // Scan between boundaries
         // Accumulate weighted effect of each neighboring pixel
-        AddWeight(srcRow[i],contrib->row[x].weights[i-left],r,g,b,a);
+        AddWeight(srcRow[i / scaleWidth],contrib->row[x].weights[i-left],r,g,b,a);
       }
       dstRow[x] = RGB(r,g,b) | (a << 24); // Place result in destination pixel
     }
@@ -257,26 +261,42 @@ void TwoPassScale<FilterClass>::ScaleRow(COLORREF* src, UINT srcWidth, COLORREF*
 
 template<class FilterClass>
 void TwoPassScale<FilterClass>::HorizScale(COLORREF* src, UINT srcWidth, UINT srcHeight, COLORREF* dst,
-                                           UINT resWidth, UINT resHeight)
+                                           UINT resWidth, UINT resHeight, UINT scaleWidth)
 {
   if (resWidth == srcWidth)
   {
     // No scaling required, just copy
-    memcpy(dst,src,sizeof (COLORREF) * srcHeight * srcWidth);
+    if (scaleWidth != 1)
+    {
+      for (UINT y = 0; y < srcHeight; y++)
+      {
+        COLORREF* srcRow = src + (y * (srcWidth / scaleWidth));
+        COLORREF* dstRow = dst + (y * resWidth);
+        for (UINT x = 0; x < srcWidth; x++)
+        {
+          dstRow[x] = srcRow[x / scaleWidth];
+        }
+      }
+    }
+    else
+      memcpy(dst,src,sizeof (COLORREF) * srcHeight * srcWidth);
   }
-  // Allocate and calculate the contributions
-  LineContribType* contrib = CalcContributions(resWidth,srcWidth,(float)resWidth / (float)srcWidth);
-  for (UINT i = 0; i < resHeight; i++)
+  else
   {
-    // Step through rows
-    ScaleRow(src,srcWidth,dst,resWidth,i,contrib);
+    // Allocate and calculate the contributions
+    LineContribType* contrib = CalcContributions(resWidth,srcWidth,(float)resWidth / (float)srcWidth);
+    for (UINT i = 0; i < resHeight; i++)
+    {
+      // Step through rows
+      ScaleRow(src,srcWidth,dst,resWidth,i,contrib,scaleWidth);
+    }
+    FreeContributions(contrib); // Free contributions structure
   }
-  FreeContributions(contrib); // Free contributions structure
 }
 
 template<class FilterClass>
 void TwoPassScale<FilterClass>::ScaleCol(COLORREF* src, UINT srcWidth, COLORREF* res, UINT resWidth, UINT resHeight,
-                                         UINT col, LineContribType* contrib)
+                                         UINT col, LineContribType* contrib, UINT scaleHeight)
 {
   for (UINT y = 0; y < resHeight; y++)
   {
@@ -284,10 +304,10 @@ void TwoPassScale<FilterClass>::ScaleCol(COLORREF* src, UINT srcWidth, COLORREF*
     int r = 0; int g = 0; int b = 0; int a = 0;
     int left = contrib->row[y].left;    // Retrieve left boundary
     int right = contrib->row[y].right;  // Retrieve right boundary
-    int same = 1; COLORREF color = src[left * srcWidth + col];
+    int same = 1; COLORREF color = src[((left / scaleHeight) * srcWidth) + col];
     for (int i = left+1; i <= right; i++)
     {
-      if (src[i * srcWidth + col] != color)
+      if (src[((i / scaleHeight) * srcWidth) + col] != color)
       {
         same = 0;
         break;
@@ -301,7 +321,7 @@ void TwoPassScale<FilterClass>::ScaleCol(COLORREF* src, UINT srcWidth, COLORREF*
       {
         // Scan between boundaries
         // Accumulate weighted effect of each neighboring pixel
-        AddWeight(src[i * srcWidth + col],contrib->row[y].weights[i-left],r,g,b,a);
+        AddWeight(src[((i / scaleHeight) * srcWidth) + col],contrib->row[y].weights[i-left],r,g,b,a);
       }
       res[y * resWidth + col] = RGB(r,g,b) | (a << 24); // Place result in destination pixel
     }
@@ -310,33 +330,47 @@ void TwoPassScale<FilterClass>::ScaleCol(COLORREF* src, UINT srcWidth, COLORREF*
 
 template<class FilterClass>
 void TwoPassScale<FilterClass>::VertScale(COLORREF* src, UINT srcWidth, UINT srcHeight, COLORREF* dst,
-                                          UINT resWidth, UINT resHeight)
+                                          UINT resWidth, UINT resHeight, UINT scaleHeight)
 {
   if (srcHeight == resHeight)
   {
     // No scaling required, just copy
-    memcpy (dst,src,sizeof (COLORREF) * srcHeight * srcWidth);
+    if (scaleHeight != 1)
+    {
+      for (UINT y = 0; y < srcHeight; y++)
+      {
+        COLORREF* srcRow = src + ((y / scaleHeight) * srcWidth);
+        COLORREF* dstRow = dst + (y * resWidth);
+        memcpy (dstRow,srcRow,sizeof (COLORREF) * srcWidth);
+      }
+    }
+    else
+      memcpy (dst,src,sizeof (COLORREF) * srcHeight * srcWidth);
   }
-  // Allocate and calculate the contributions
-  LineContribType* contrib = CalcContributions(resHeight,srcHeight,(float)resHeight / (float)srcHeight);
-  for (UINT i = 0; i < resWidth; i++)
+  else
   {
-    // Step through columns
-    ScaleCol(src,srcWidth,dst,resWidth,resHeight,i,contrib);
+    // Allocate and calculate the contributions
+    LineContribType* contrib = CalcContributions(resHeight,srcHeight,(float)resHeight / (float)srcHeight);
+    for (UINT i = 0; i < resWidth; i++)
+    {
+      // Step through columns
+      ScaleCol(src,srcWidth,dst,resWidth,resHeight,i,contrib,scaleHeight);
+    }
+    FreeContributions(contrib); // Free contributions structure
   }
-  FreeContributions(contrib); // Free contributions structure
 }
 
 template<class FilterClass>
-void TwoPassScale<FilterClass>::Scale(COLORREF* origImage, UINT origWidth, UINT origHeight,
-                                      COLORREF* dstImage, UINT newWidth, UINT newHeight)
+void TwoPassScale<FilterClass>::Scale(
+  COLORREF* origImage, UINT origWidth, UINT origHeight,
+  COLORREF* dstImage, UINT newWidth, UINT newHeight, UINT origScale)
 {
   // Scale source image horizontally into temporary image
   COLORREF* temp = new COLORREF[newWidth * origHeight];
-  HorizScale(origImage,origWidth,origHeight,temp,newWidth,origHeight);
+  HorizScale(origImage,origWidth*origScale,origHeight,temp,newWidth,origHeight,origScale);
 
   // Scale temporary image vertically into result image
-  VertScale(temp,newWidth,origHeight,dstImage,newWidth,newHeight);
+  VertScale(temp,newWidth,origHeight*origScale,dstImage,newWidth,newHeight,origScale);
   delete[] temp;
 }
 
@@ -345,5 +379,14 @@ void ScaleGfx(
   COLORREF* destImage, UINT destWidth, UINT destHeight)
 {
   TwoPassScale<BilinearFilter> scaler;
-  scaler.Scale(srcImage,srcWidth,srcHeight,destImage,destWidth,destHeight);
+  scaler.Scale(srcImage,srcWidth,srcHeight,destImage,destWidth,destHeight,1);
+}
+
+void ScalePixelGfx(
+  COLORREF* srcImage, UINT srcWidth, UINT srcHeight,
+  COLORREF* destImage, UINT destWidth, UINT destHeight,
+  UINT srcScale)
+{
+  TwoPassScale<BilinearFilter> scaler;
+  scaler.Scale(srcImage,srcWidth,srcHeight,destImage,destWidth,destHeight,srcScale);
 }
