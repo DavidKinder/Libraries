@@ -148,6 +148,8 @@ protected:
 
 class DarkModeListBox : public CListBox
 {
+  DECLARE_DYNAMIC(DarkModeListBox)
+
 public:
   void SetDarkMode(DarkMode* dark);
 

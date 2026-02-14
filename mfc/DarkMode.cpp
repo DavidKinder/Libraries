@@ -892,6 +892,8 @@ void DarkModeGroupBox::OnPaint()
 
 // Dark mode controls: DarkModeListBox
 
+IMPLEMENT_DYNAMIC(DarkModeListBox, CListBox)
+
 BEGIN_MESSAGE_MAP(DarkModeListBox, CListBox)
   ON_WM_NCPAINT()
 END_MESSAGE_MAP()
